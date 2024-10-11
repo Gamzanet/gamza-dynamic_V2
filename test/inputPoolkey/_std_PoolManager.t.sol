@@ -583,14 +583,14 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         if (Hooks.hasPermission(inputkey.hooks, Hooks.BEFORE_DONATE_FLAG)) {
             // Fails at beforeDonate hook.
             vm.expectRevert(Hooks.InvalidHookResponse.selector);
-            if (inputkey.currency0.isAddressZero()) donateRouter.donate{value: 100}(nativeKey, 100, 200, ZERO_BYTES);
+            if (inputkey.currency0.isAddressZero()) donateRouter.donate{value: 100}(key, 100, 200, ZERO_BYTES);
             else donateRouter.donate(key, 100, 200, ZERO_BYTES);
         }
         if (Hooks.hasPermission(inputkey.hooks, Hooks.AFTER_DONATE_FLAG)) {
             // Fail at afterDonate hook.
             mockHooks.setReturnValue(mockHooks.beforeDonate.selector, mockHooks.beforeDonate.selector);
             vm.expectRevert(Hooks.InvalidHookResponse.selector);
-            if (inputkey.currency0.isAddressZero()) donateRouter.donate{value: 100}(nativeKey, 100, 200, ZERO_BYTES);
+            if (inputkey.currency0.isAddressZero()) donateRouter.donate{value: 100}(key, 100, 200, ZERO_BYTES);
             else donateRouter.donate(key, 100, 200, ZERO_BYTES);
         }
     }
@@ -620,7 +620,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         mockHooks.setReturnValue(mockHooks.beforeDonate.selector, mockHooks.beforeDonate.selector);
         mockHooks.setReturnValue(mockHooks.afterDonate.selector, mockHooks.afterDonate.selector);
 
-        if (inputkey.currency0.isAddressZero()) donateRouter.donate{value: 100}(nativeKey, 100, 200, ZERO_BYTES);
+        if (inputkey.currency0.isAddressZero()) donateRouter.donate{value: 100}(key, 100, 200, ZERO_BYTES);
         else donateRouter.donate(key, 100, 200, ZERO_BYTES);
     }
 }
