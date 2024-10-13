@@ -81,7 +81,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
     PoolKey inputkey;
     address hookAddr;
-    event permission(Hooks.Permissions);
     function setUp() public {
         // string memory code_json = vm.readFile("test/inputPoolkey/patched_TakeProfitsHook.json");
         string memory code_json = vm.readFile("test/inputPoolkey/patched_Allhook.json");

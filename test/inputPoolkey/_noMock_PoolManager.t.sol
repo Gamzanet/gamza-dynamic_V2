@@ -16,13 +16,10 @@ import {MockHooks} from "v4-core/src/test/MockHooks.sol";
 import {MockContract} from "v4-core/src/test/MockContract.sol";
 import {EmptyTestHooks} from "v4-core/src/test/EmptyTestHooks.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
-import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
 import {BalanceDelta, BalanceDeltaLibrary} from "v4-core/src/types/BalanceDelta.sol";
-import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
 import {TestInvalidERC20} from "v4-core/src/test/TestInvalidERC20.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {PoolEmptyUnlockTest} from "v4-core/src/test/PoolEmptyUnlockTest.sol";
-import {Action} from "v4-core/src/test/PoolNestedActionsTest.sol";
 import {PoolId} from "v4-core/src/types/PoolId.sol";
 import {LPFeeLibrary} from "v4-core/src/libraries/LPFeeLibrary.sol";
 import {Position} from "v4-core/src/libraries/Position.sol";
@@ -30,12 +27,21 @@ import {Constants} from "v4-core/test/utils/Constants.sol";
 import {SafeCast} from "v4-core/src/libraries/SafeCast.sol";
 import {AmountHelpers} from "v4-core/test/utils/AmountHelpers.sol";
 import {ProtocolFeeLibrary} from "v4-core/src/libraries/ProtocolFeeLibrary.sol";
-import {IProtocolFees} from "v4-core/src/interfaces/IProtocolFees.sol";
 import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
-import {Actions} from "v4-core/src/test/ActionsRouter.sol";
 
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+
+// Routers
+import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
+import {PoolModifyLiquidityTestNoChecks} from "v4-core/src/test/PoolModifyLiquidityTestNoChecks.sol";
+import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
+import {SwapRouterNoChecks} from "v4-core/src/test/SwapRouterNoChecks.sol";
 import {PoolDonateTest} from "v4-core/src/test/PoolDonateTest.sol";
+import {PoolTakeTest} from "v4-core/src/test/PoolTakeTest.sol";
+import {PoolClaimsTest} from "v4-core/src/test/PoolClaimsTest.sol";
+import {Action, PoolNestedActionsTest} from "v4-core/src/test/PoolNestedActionsTest.sol";
+import {ProtocolFeeControllerTest} from "v4-core/src/test/ProtocolFeeControllerTest.sol";
+import {Actions, ActionsRouter} from "v4-core/src/test/ActionsRouter.sol";
 
 contract PoolManagerTest is Test, Deployers, GasSnapshot {
     using Hooks for IHooks;
@@ -75,7 +81,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
     PoolKey inputkey;
     address hookAddr;
-    event permission(Hooks.Permissions);
     function setUp() public {
         // string memory code_json = vm.readFile("test/inputPoolkey/patched_TakeProfitsHook.json");
         string memory code_json = vm.readFile("test/inputPoolkey/patched_Allhook.json");

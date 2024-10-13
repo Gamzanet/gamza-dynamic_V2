@@ -104,6 +104,11 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         custom_deployFreshManagerAndRouters();
         if (!inputkey.currency0.isAddressZero()) custom_ApproveCurrency(inputkey.currency0);
         custom_ApproveCurrency(inputkey.currency1);
+
+        // check initialized
+        (uint160 sqrtPriceX96,,,) = manager.getSlot0(inputkey.toId());
+        if (sqrtPriceX96 == 0)
+            (key,) = initPool(inputkey.currency0, inputkey.currency1, inputkey.hooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
     }
 
     function test_initialize_succeedsWithHooks(uint160 sqrtPriceX96) public {
