@@ -74,12 +74,11 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     Hooks.Permissions flag;
     uint24 FEE;
     function timeWarp(uint256 timeToAdd) internal {
-        uint256 currentTime = block.timestamp;
-        uint256 tmptime = uint256(currentTime) - 1;
+        uint256 currentTime = vm.getBlockTimestamp();
         vm.warp(currentTime + timeToAdd);
-        uint256 newTime = block.timestamp;
+        uint256 newTime = vm.getBlockTimestamp();
 
-        assertEq(newTime, uint256(tmptime + timeToAdd ) + 1, "Time did not warp correctly");
+        assertEq(newTime, uint256(currentTime + timeToAdd ), "Time did not warp correctly");
         console.log("warp end");
         
     }

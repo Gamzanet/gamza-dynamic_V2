@@ -145,19 +145,12 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
 
     function timeWarp(uint256 timeToAdd) internal {
-        uint256 currentTime = block.timestamp;
-        uint256 tmptime = uint256(currentTime) - 1;
-        // console.log("currentTime :",currentTime);
-        // console.log("tmp    Time :",tmptime);
+        uint256 currentTime = vm.getBlockTimestamp();
         vm.warp(currentTime + timeToAdd);
-        uint256 newTime = block.timestamp;
-        // console.log("newtime     :", newTime);
-        // console.log("currentTime :",currentTime);
-        // console.log("tmp    Time :",tmptime);
-        // console.log("asdfasfas: ",uint256(tmptime + timeToAdd ));
-        // console.log("asdfasfas: ",uint256(tmptime + timeToAdd ));
-        assertEq(newTime, uint256(tmptime + timeToAdd ) + 1, "Time did not warp correctly");
-        // console.log("moc12312312");
+        uint256 newTime = vm.getBlockTimestamp();
+        assertEq(newTime, uint256(currentTime + timeToAdd ), "Time did not warp correctly");
+        console.log("warp end");
+        
     }
 
     function test_initialize_atSpecificTime1Day(uint160 sqrtPriceX96) public {

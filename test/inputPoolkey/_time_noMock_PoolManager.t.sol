@@ -76,13 +76,13 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     PoolKey inputkey;
     address hookAddr;
     event permission(Hooks.Permissions);
-        function timeWarp(uint256 timeToAdd) internal {
-        uint256 currentTime = block.timestamp;
-        uint256 tmptime = uint256(currentTime) - 1;
+    function timeWarp(uint256 timeToAdd) internal {
+        uint256 currentTime = vm.getBlockTimestamp();
         vm.warp(currentTime + timeToAdd);
-        uint256 newTime = block.timestamp;
-        assertEq(newTime, uint256(tmptime + timeToAdd ) + 1, "Time did not warp correctly");
-        // console.log("moc12312312");
+        uint256 newTime = vm.getBlockTimestamp();
+        assertEq(newTime, uint256(currentTime + timeToAdd ), "Time did not warp correctly");
+        console.log("warp end");
+        
     }
     function setUp() public {
         string memory code_json = vm.readFile("test/inputPoolkey/patched_Allhook.json");
