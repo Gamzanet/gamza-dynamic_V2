@@ -30,6 +30,10 @@ import {ProtocolFeeLibrary} from "v4-core/src/libraries/ProtocolFeeLibrary.sol";
 import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
 
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+import {IQuoter} from "v4-periphery/src/interfaces/IQuoter.sol";
+import {Quoter} from "v4-periphery/src/lens/Quoter.sol";
+import {PathKey} from "v4-periphery/src/libraries/PathKey.sol";
+
 
 // Routers
 import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
@@ -80,7 +84,9 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     uint24 constant MAX_PROTOCOL_FEE_BOTH_TOKENS = (1000 << 12) | 1000; // 1000 1000
 
     PoolKey inputkey;
+    PoolKey emptyHook;
     address hookAddr;
+    Quoter quoter;
     function setUp() public {
         // string memory code_json = vm.readFile("test/inputPoolkey/patched_TakeProfitsHook.json");
         string memory code_json = vm.readFile("test/inputPoolkey/patched_Allhook.json");
@@ -107,29 +113,34 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         // check initialized
         (uint160 sqrtPriceX96,,,) = manager.getSlot0(inputkey.toId());
-        console.log(sqrtPriceX96);
-        if (sqrtPriceX96 == 0)
-            (key,) = initPool(inputkey.currency0, inputkey.currency1, inputkey.hooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+        if (sqrtPriceX96 == 0) {
+            initPool(inputkey.currency0, inputkey.currency1, inputkey.hooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+            sqrtPriceX96 = SQRT_PRICE_1_1;
+        }
+
+        key = inputkey;
+        (emptyHook,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(address(0)), inputkey.fee, inputkey.tickSpacing, sqrtPriceX96);
     }
 
-    function test_initialize_succeedsWithHooks(uint160 sqrtPriceX96) public {
-        if (
-            !Hooks.hasPermission(inputkey.hooks, Hooks.BEFORE_INITIALIZE_FLAG) &&
-            !Hooks.hasPermission(inputkey.hooks, Hooks.AFTER_INITIALIZE_FLAG)
-        ) {
-            emit log_string("Skip Test");
-            return;
-        }
-        sqrtPriceX96 = uint160(bound(sqrtPriceX96, TickMath.MIN_SQRT_PRICE, TickMath.MAX_SQRT_PRICE - 1));
+    function test_addLiquidity_Swap_removeLiquidity() public {
+        console.log(address(this).balance);
+        
+        BalanceDelta balanceDelta;
+        if (currency0.isAddressZero()) balanceDelta = modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, LIQUIDITY_PARAMS, ZERO_BYTES);
+        else balanceDelta = modifyLiquidityRouter.modifyLiquidity(key, LIQUIDITY_PARAMS, ZERO_BYTES);
+        console.log(address(this).balance);
 
-        address payable mockAddr = payable(address(uint160(address(hookAddr)) ^ (0xffffffff << 128)));
+        vm.startPrank(address(31337));
+        vm.deal(address(31337), 100);
+        PoolSwapTest.TestSettings memory testSettings = PoolSwapTest.TestSettings({
+            takeClaims: false, settleUsingBurn: false
+        });
+        if (inputkey.currency0.isAddressZero()) balanceDelta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+        else balanceDelta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+        vm.stopPrank();
 
-        MockContract mockContract = new MockContract();
-        vm.etch(mockAddr, address(mockContract).code);
-
-        MockContract(mockAddr).setImplementation(hookAddr);
-
-        (key,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(mockAddr), inputkey.fee, inputkey.tickSpacing, sqrtPriceX96);
+        balanceDelta = modifyLiquidityRouter.modifyLiquidity(key, REMOVE_LIQUIDITY_PARAMS, ZERO_BYTES);
+        console.log(address(this).balance);
     }
 
     function test_addLiquidity_succeedsWithHooksIfInitialized(uint160 sqrtPriceX96) public {
@@ -634,6 +645,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         actionsRouter = new ActionsRouter(manager);
 
         manager.setProtocolFeeController(feeController);
+
+        quoter = new Quoter(IPoolManager(manager));
     }
 
     function custom_ApproveCurrency(Currency currency) internal {

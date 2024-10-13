@@ -16,13 +16,10 @@ import {MockHooks} from "v4-core/src/test/MockHooks.sol";
 import {MockContract} from "v4-core/src/test/MockContract.sol";
 import {EmptyTestHooks} from "v4-core/src/test/EmptyTestHooks.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
-import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
 import {BalanceDelta, BalanceDeltaLibrary} from "v4-core/src/types/BalanceDelta.sol";
-import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
 import {TestInvalidERC20} from "v4-core/src/test/TestInvalidERC20.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {PoolEmptyUnlockTest} from "v4-core/src/test/PoolEmptyUnlockTest.sol";
-import {Action} from "v4-core/src/test/PoolNestedActionsTest.sol";
 import {PoolId} from "v4-core/src/types/PoolId.sol";
 import {LPFeeLibrary} from "v4-core/src/libraries/LPFeeLibrary.sol";
 import {Position} from "v4-core/src/libraries/Position.sol";
@@ -30,12 +27,21 @@ import {Constants} from "v4-core/test/utils/Constants.sol";
 import {SafeCast} from "v4-core/src/libraries/SafeCast.sol";
 import {AmountHelpers} from "v4-core/test/utils/AmountHelpers.sol";
 import {ProtocolFeeLibrary} from "v4-core/src/libraries/ProtocolFeeLibrary.sol";
-import {IProtocolFees} from "v4-core/src/interfaces/IProtocolFees.sol";
 import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
-import {Actions} from "v4-core/src/test/ActionsRouter.sol";
 
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+
+// Routers
+import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
+import {PoolModifyLiquidityTestNoChecks} from "v4-core/src/test/PoolModifyLiquidityTestNoChecks.sol";
+import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
+import {SwapRouterNoChecks} from "v4-core/src/test/SwapRouterNoChecks.sol";
 import {PoolDonateTest} from "v4-core/src/test/PoolDonateTest.sol";
+import {PoolTakeTest} from "v4-core/src/test/PoolTakeTest.sol";
+import {PoolClaimsTest} from "v4-core/src/test/PoolClaimsTest.sol";
+import {Action, PoolNestedActionsTest} from "v4-core/src/test/PoolNestedActionsTest.sol";
+import {ProtocolFeeControllerTest} from "v4-core/src/test/ProtocolFeeControllerTest.sol";
+import {Actions, ActionsRouter} from "v4-core/src/test/ActionsRouter.sol";
 
 contract PoolManagerTest is Test, Deployers, GasSnapshot {
     uint256 constant ONE_DAY = 1 days;
@@ -85,10 +91,10 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
     PoolKey inputkey;
     address hookAddr;
-    event permission(Hooks.Permissions);
     function setUp() public {
         //string memory code_json = vm.readFile("test/inputPoolkey/patched_TakeProfitsHook.json");
         string memory code_json = vm.readFile("test/inputPoolkey/patched_Allhook.json");
+
         address _currency0 = vm.parseJsonAddress(code_json, ".data.currency0");
         address _currency1 = vm.parseJsonAddress(code_json, ".data.currency1");
         uint24 _fee = uint24(vm.parseJsonUint(code_json, ".data.fee"));
@@ -97,50 +103,17 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         inputkey.currency0 = Currency.wrap(_currency0);
         inputkey.currency1 = Currency.wrap(_currency1);
-        inputkey.fee = (_fee < 100) ? 100 : _fee;
+        inputkey.fee = _fee;
         inputkey.tickSpacing = _tickSpacing;
         inputkey.hooks = IHooks(_hooks);
 
-        Hooks.Permissions memory flag;
-        (bool success, bytes memory returnData) = address(inputkey.hooks).call(abi.encodeWithSignature("getHookPermissions()"));
-        flag = abi.decode(returnData, (Hooks.Permissions));
-        emit permission(flag);
+        checkFlag();
 
         hookAddr = address(inputkey.hooks);
-        
-        // eth-sepolia
-        // manager = IPoolManager(0xe8e23e97fa135823143d6b9cba9c699040d51f70);
-        // swapRouter = PoolSwapTest(0x0937c4d65d7cddbf02e75b88dd33f536b201c2a6);
-        // modifyLiquidityRouter = PoolModifyLiquidityTest(0x94df58ccb1ac6e5958b8ee1e2491f224414a2bf7);
 
-        // base-sepolia
-        // manager = IPoolManager(0x39BF2eFF94201cfAA471932655404F63315147a4);
-        // swapRouter = PoolSwapTest(0xFf34e285F8ED393E366046153e3C16484A4dD674);
-        // modifyLiquidityRouter = PoolModifyLiquidityTest(0x841B5A0b3DBc473c8A057E2391014aa4C4751351);
-        vm.label(address(manager), "poolManager");
-        vm.label(address(swapRouter), "swapRouter");
-        vm.label(address(modifyLiquidityRouter), "modifyLiquidityRouter");
-        vm.label(_hooks, "hook");
-        vm.label(address(0x9eF67780BE41891AEb81db1a898A6b13Ee343fF0), "real hook");
-
-       //deployFreshManagerAndRouters();
-        
-        manager = new PoolManager();
-        
-        swapRouter = new PoolSwapTest(manager);
-        modifyLiquidityRouter = new PoolModifyLiquidityTest(manager);
-        donateRouter = new PoolDonateTest(manager);
-
-        if (!inputkey.currency0.isAddressZero()) {
-            deal(address(Currency.unwrap(inputkey.currency0)), address(this), type(uint256).max);
-            MockERC20(Currency.unwrap(inputkey.currency0)).approve(address(swapRouter), Constants.MAX_UINT256);
-            MockERC20(Currency.unwrap(inputkey.currency0)).approve(address(modifyLiquidityRouter), Constants.MAX_UINT256);
-            MockERC20(Currency.unwrap(inputkey.currency0)).approve(address(donateRouter), Constants.MAX_UINT256);
-        }
-        deal(address(Currency.unwrap(inputkey.currency1)), address(this), type(uint256).max);
-        MockERC20(Currency.unwrap(inputkey.currency1)).approve(address(swapRouter), Constants.MAX_UINT256);
-        MockERC20(Currency.unwrap(inputkey.currency1)).approve(address(modifyLiquidityRouter), Constants.MAX_UINT256);
-        MockERC20(Currency.unwrap(inputkey.currency1)).approve(address(donateRouter), Constants.MAX_UINT256);
+        custom_deployFreshManagerAndRouters();
+        if (!inputkey.currency0.isAddressZero()) custom_ApproveCurrency(inputkey.currency0);
+        custom_ApproveCurrency(inputkey.currency1);
     }
 
 
@@ -1028,5 +1001,53 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         if (inputkey.currency0.isAddressZero()) donateRouter.donate{value: 100}(key, 100, 200, ZERO_BYTES);
         else donateRouter.donate(key, 100, 200, ZERO_BYTES);
+    }
+
+    function custom_deployFreshManagerAndRouters() internal {
+        // unichain-sepolia
+        // manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
+        manager = new PoolManager();
+
+        swapRouter = new PoolSwapTest(manager);
+        swapRouterNoChecks = new SwapRouterNoChecks(manager);
+        modifyLiquidityRouter = new PoolModifyLiquidityTest(manager);
+        modifyLiquidityNoChecks = new PoolModifyLiquidityTestNoChecks(manager);
+        donateRouter = new PoolDonateTest(manager);
+        takeRouter = new PoolTakeTest(manager);
+        claimsRouter = new PoolClaimsTest(manager);
+        nestedActionRouter = new PoolNestedActionsTest(manager);
+        feeController = new ProtocolFeeControllerTest();
+        actionsRouter = new ActionsRouter(manager);
+
+        manager.setProtocolFeeController(feeController);
+    }
+
+    function custom_ApproveCurrency(Currency currency) internal {
+        MockERC20 token = MockERC20(Currency.unwrap(currency));
+        
+        deal(address(token), address(this), type(uint256).max);
+        address[9] memory toApprove = [
+            address(swapRouter),
+            address(swapRouterNoChecks),
+            address(modifyLiquidityRouter),
+            address(modifyLiquidityNoChecks),
+            address(donateRouter),
+            address(takeRouter),
+            address(claimsRouter),
+            address(nestedActionRouter.executor()),
+            address(actionsRouter)
+        ];
+
+        for (uint256 i = 0; i < toApprove.length; i++) {
+            token.approve(toApprove[i], Constants.MAX_UINT256);
+        }
+    }
+
+    event permission(Hooks.Permissions);
+    function checkFlag() public {
+        Hooks.Permissions memory flag;
+        (,bytes memory returnData) = address(inputkey.hooks).call(abi.encodeWithSignature("getHookPermissions()"));
+        flag = abi.decode(returnData, (Hooks.Permissions));
+        emit permission(flag);
     }
 }
