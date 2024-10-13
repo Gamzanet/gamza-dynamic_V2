@@ -75,7 +75,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     uint24 FEE;
     function setUp() public {
         address forFlag = address(uint160(Hooks.ALL_HOOK_MASK));
-
         // dynamic
         // string memory code_json = vm.readFile("test/inputBytecode/patched_GasPriceFeesHook.json");
         string memory code_json = vm.readFile("test/inputBytecode/patched_PointsHook.json");
@@ -88,9 +87,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         (bool success, bytes memory returnData) = forFlag.call(abi.encodeWithSignature("getHookPermissions()"));
         flag = abi.decode(returnData, (Hooks.Permissions));
         hookAddr = generateHookAddress();
-        // (bool success, bytes memory returnData) = addr.call(abi.encodeWithSignature("isDynamicFee()"));
-        // bool isDynamic = abi.decode(returnData, (bool));
-        // FEE = isDynamic ? LPFeeLibrary.DYNAMIC_FEE_FLAG : Constants.FEE_MEDIUM;
 
         // FEE = LPFeeLibrary.DYNAMIC_FEE_FLAG;
         FEE = Constants.FEE_MEDIUM;

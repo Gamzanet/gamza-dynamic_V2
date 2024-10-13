@@ -77,9 +77,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     address hookAddr;
     event permission(Hooks.Permissions);
     function setUp() public {
-        string memory code_json = vm.readFile("test/inputPoolkey/json_TakeProfitsHook.json");
-        // string memory code_json = vm.readFile("test/inputPoolkey/json_another4.json");
-        // string memory code_json = vm.readFile("test/inputPoolkey/json_soripoolkey.json");
+        // string memory code_json = vm.readFile("test/inputPoolkey/patched_TakeProfitsHook.json");
+        string memory code_json = vm.readFile("test/inputPoolkey/patched_Allhook.json");
 
         address _currency0 = vm.parseJsonAddress(code_json, ".data.currency0");
         address _currency1 = vm.parseJsonAddress(code_json, ".data.currency1");
@@ -93,31 +92,13 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         inputkey.tickSpacing = _tickSpacing;
         inputkey.hooks = IHooks(_hooks);
 
-        Hooks.Permissions memory flag;
-        (bool success, bytes memory returnData) = address(inputkey.hooks).call(abi.encodeWithSignature("getHookPermissions()"));
-        flag = abi.decode(returnData, (Hooks.Permissions));
-        emit permission(flag);
+        checkFlag();
 
         hookAddr = address(inputkey.hooks);
-        
-        // unichain-sepolia
-        // manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
-        manager = new PoolManager();
-        
-        swapRouter = new PoolSwapTest(manager);
-        modifyLiquidityRouter = new PoolModifyLiquidityTest(manager);
-        donateRouter = new PoolDonateTest(manager);
 
-        if (!inputkey.currency0.isAddressZero()) {
-            deal(address(Currency.unwrap(inputkey.currency0)), address(this), type(uint256).max);
-            MockERC20(Currency.unwrap(inputkey.currency0)).approve(address(swapRouter), Constants.MAX_UINT256);
-            MockERC20(Currency.unwrap(inputkey.currency0)).approve(address(modifyLiquidityRouter), Constants.MAX_UINT256);
-            MockERC20(Currency.unwrap(inputkey.currency0)).approve(address(donateRouter), Constants.MAX_UINT256);
-        }
-        deal(address(Currency.unwrap(inputkey.currency1)), address(this), type(uint256).max);
-        MockERC20(Currency.unwrap(inputkey.currency1)).approve(address(swapRouter), Constants.MAX_UINT256);
-        MockERC20(Currency.unwrap(inputkey.currency1)).approve(address(modifyLiquidityRouter), Constants.MAX_UINT256);
-        MockERC20(Currency.unwrap(inputkey.currency1)).approve(address(donateRouter), Constants.MAX_UINT256);
+        custom_deployFreshManagerAndRouters();
+        if (!inputkey.currency0.isAddressZero()) custom_ApproveCurrency(inputkey.currency0);
+        custom_ApproveCurrency(inputkey.currency1);
     }
 
     function test_initialize_succeedsWithHooks(uint160 sqrtPriceX96) public {
@@ -287,5 +268,53 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         if (inputkey.currency0.isAddressZero()) swapRouter.swap{value: 100}(key, swapParams, testSettings, ZERO_BYTES);
         else swapRouter.swap(key, swapParams, testSettings, ZERO_BYTES);
         snapLastCall("swap with hooks");
+    }
+
+    function custom_deployFreshManagerAndRouters() internal {
+        // unichain-sepolia
+        // manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
+        manager = new PoolManager();
+
+        swapRouter = new PoolSwapTest(manager);
+        swapRouterNoChecks = new SwapRouterNoChecks(manager);
+        modifyLiquidityRouter = new PoolModifyLiquidityTest(manager);
+        modifyLiquidityNoChecks = new PoolModifyLiquidityTestNoChecks(manager);
+        donateRouter = new PoolDonateTest(manager);
+        takeRouter = new PoolTakeTest(manager);
+        claimsRouter = new PoolClaimsTest(manager);
+        nestedActionRouter = new PoolNestedActionsTest(manager);
+        feeController = new ProtocolFeeControllerTest();
+        actionsRouter = new ActionsRouter(manager);
+
+        manager.setProtocolFeeController(feeController);
+    }
+
+    function custom_ApproveCurrency(Currency currency) internal {
+        MockERC20 token = MockERC20(Currency.unwrap(currency));
+        
+        deal(address(token), address(this), type(uint256).max);
+        address[9] memory toApprove = [
+            address(swapRouter),
+            address(swapRouterNoChecks),
+            address(modifyLiquidityRouter),
+            address(modifyLiquidityNoChecks),
+            address(donateRouter),
+            address(takeRouter),
+            address(claimsRouter),
+            address(nestedActionRouter.executor()),
+            address(actionsRouter)
+        ];
+
+        for (uint256 i = 0; i < toApprove.length; i++) {
+            token.approve(toApprove[i], Constants.MAX_UINT256);
+        }
+    }
+
+    event permission(Hooks.Permissions);
+    function checkFlag() public {
+        Hooks.Permissions memory flag;
+        (,bytes memory returnData) = address(inputkey.hooks).call(abi.encodeWithSignature("getHookPermissions()"));
+        flag = abi.decode(returnData, (Hooks.Permissions));
+        emit permission(flag);
     }
 }
