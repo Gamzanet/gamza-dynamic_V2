@@ -34,7 +34,6 @@ import {IQuoter} from "v4-periphery/src/interfaces/IQuoter.sol";
 import {Quoter} from "v4-periphery/src/lens/Quoter.sol";
 import {PathKey} from "v4-periphery/src/libraries/PathKey.sol";
 
-
 // Routers
 import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
 import {PoolModifyLiquidityTestNoChecks} from "v4-core/src/test/PoolModifyLiquidityTestNoChecks.sol";
@@ -114,12 +113,12 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         // check initialized
         (uint160 sqrtPriceX96,,,) = manager.getSlot0(inputkey.toId());
         if (sqrtPriceX96 == 0) {
-            initPool(inputkey.currency0, inputkey.currency1, inputkey.hooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+            initPool(inputkey.currency0, inputkey.currency1, inputkey.hooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             sqrtPriceX96 = SQRT_PRICE_1_1;
         }
 
         key = inputkey;
-        (emptyHook,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(address(0)), inputkey.fee, inputkey.tickSpacing, sqrtPriceX96);
+        (emptyHook,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(address(0)), inputkey.fee, inputkey.tickSpacing, sqrtPriceX96, ZERO_BYTES);
     }
 
     function test_addLiquidity_succeedsWithHooksIfInitialized() public {
@@ -228,8 +227,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
     function custom_deployFreshManagerAndRouters() internal {
         // unichain-sepolia
-        // manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
-        manager = new PoolManager();
+        manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
 
         swapRouter = new PoolSwapTest(manager);
         swapRouterNoChecks = new SwapRouterNoChecks(manager);

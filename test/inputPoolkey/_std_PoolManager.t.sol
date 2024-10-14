@@ -82,8 +82,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     PoolKey inputkey;
     address hookAddr;
     function setUp() public {
-        // string memory code_json = vm.readFile("test/inputPoolkey/patched_TakeProfitsHook.json");
-        string memory code_json = vm.readFile("test/inputPoolkey/patched_Allhook.json");
+        string memory code_json = vm.readFile("test/inputPoolkey/TakeProfitsHook.json");
+        // string memory code_json = vm.readFile("test/inputPoolkey/patched_Allhook.json");
 
         address _currency0 = vm.parseJsonAddress(code_json, ".data.currency0");
         address _currency1 = vm.parseJsonAddress(code_json, ".data.currency1");
@@ -123,7 +123,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         MockContract(mockAddr).setImplementation(hookAddr);
 
-        (key,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(mockAddr), inputkey.fee, inputkey.tickSpacing, sqrtPriceX96);
+        (key,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(mockAddr), inputkey.fee, inputkey.tickSpacing, sqrtPriceX96, ZERO_BYTES);
     }
 
     function test_addLiquidity_succeedsWithHooksIfInitialized(uint160 sqrtPriceX96) public {
@@ -143,7 +143,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         MockContract(mockAddr).setImplementation(hookAddr);
 
-        (key,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(mockAddr), inputkey.fee, inputkey.tickSpacing, sqrtPriceX96);
+        (key,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(mockAddr), inputkey.fee, inputkey.tickSpacing, sqrtPriceX96, ZERO_BYTES);
         
         BalanceDelta balanceDelta;
         if (currency0.isAddressZero()) balanceDelta = modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, LIQUIDITY_PARAMS, ZERO_BYTES);
@@ -187,7 +187,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         MockContract(mockAddr).setImplementation(hookAddr);
 
-        (key,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(mockAddr), inputkey.fee, inputkey.tickSpacing, sqrtPriceX96);
+        (key,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(mockAddr), inputkey.fee, inputkey.tickSpacing, sqrtPriceX96, ZERO_BYTES);
         
         if (currency0.isAddressZero()) modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         else modifyLiquidityRouter.modifyLiquidity(key, LIQUIDITY_PARAMS, ZERO_BYTES);
@@ -230,7 +230,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         vm.etch(mockAddr, address(impl).code);
         MockHooks mockHooks = MockHooks(mockAddr);
         
-        (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+        (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
 
         mockHooks.setReturnValue(mockHooks.beforeAddLiquidity.selector, bytes4(0xdeadbeef));
         mockHooks.setReturnValue(mockHooks.afterAddLiquidity.selector, bytes4(0xdeadbeef));
@@ -262,7 +262,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         vm.etch(mockAddr, address(impl).code);
         MockHooks mockHooks = MockHooks(mockAddr);
 
-        (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+        (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
         
         if (currency0.isAddressZero()) modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         else modifyLiquidityRouter.modifyLiquidity(key, LIQUIDITY_PARAMS, ZERO_BYTES);
@@ -298,7 +298,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         vm.etch(mockAddr, address(impl).code);
         MockHooks mockHooks = MockHooks(mockAddr);
 
-        (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+        (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
 
         mockHooks.setReturnValue(mockHooks.beforeAddLiquidity.selector, mockHooks.beforeAddLiquidity.selector);
         mockHooks.setReturnValue(mockHooks.afterAddLiquidity.selector, mockHooks.afterAddLiquidity.selector);
@@ -320,7 +320,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         vm.etch(mockAddr, address(impl).code);
         MockHooks mockHooks = MockHooks(mockAddr);
 
-        (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+        (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
         
         if (currency0.isAddressZero()) modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         else modifyLiquidityRouter.modifyLiquidity(key, LIQUIDITY_PARAMS, ZERO_BYTES);
@@ -345,7 +345,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         vm.etch(mockAddr, address(impl).code);
         MockHooks mockHooks = MockHooks(mockAddr);
 
-        (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+        (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
 
         if (currency0.isAddressZero()) modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         else modifyLiquidityRouter.modifyLiquidity(key, LIQUIDITY_PARAMS, ZERO_BYTES);
@@ -365,7 +365,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         vm.etch(mockAddr, address(impl).code);
         MockHooks mockHooks = MockHooks(mockAddr);
 
-        (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+        (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
 
         if (currency0.isAddressZero()) {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, LIQUIDITY_PARAMS, ZERO_BYTES);
@@ -395,11 +395,11 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         MockContract(mockAddr).setImplementation(hookAddr);
 
         if (inputkey.currency0.isAddressZero()) {
-            (key,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(mockAddr), inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+            (key,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(mockAddr), inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         }
         else {
-            (key,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(mockAddr), inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+            (key,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(mockAddr), inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             modifyLiquidityRouter.modifyLiquidity(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         }
 
@@ -438,11 +438,11 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         MockHooks mockHooks = MockHooks(mockAddr);
         
         if (inputkey.currency0.isAddressZero()) {
-            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         }
         else {
-            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             modifyLiquidityRouter.modifyLiquidity(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         }
 
@@ -484,11 +484,11 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         MockHooks mockHooks = MockHooks(mockAddr);
 
         if (inputkey.currency0.isAddressZero()) {
-            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         }
         else {
-            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             modifyLiquidityRouter.modifyLiquidity(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         }
 
@@ -519,11 +519,11 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         MockHooks mockHooks = MockHooks(mockAddr);
 
         if (inputkey.currency0.isAddressZero()) {
-            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         }
         else {
-            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             modifyLiquidityRouter.modifyLiquidity(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         }
 
@@ -556,11 +556,11 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         MockHooks mockHooks = MockHooks(mockAddr);
 
         if (inputkey.currency0.isAddressZero()) {
-            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         }
         else {
-            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             modifyLiquidityRouter.modifyLiquidity(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         }
 
@@ -596,11 +596,11 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         MockHooks mockHooks = MockHooks(mockAddr);
 
         if (inputkey.currency0.isAddressZero()) {
-            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         }
         else {
-            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1);
+            (key,) = initPool(inputkey.currency0, inputkey.currency1, mockHooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             modifyLiquidityRouter.modifyLiquidity(key, LIQUIDITY_PARAMS, ZERO_BYTES);
         }
         
@@ -613,8 +613,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
     function custom_deployFreshManagerAndRouters() internal {
         // unichain-sepolia
-        // manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
-        manager = new PoolManager();
+        manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
 
         swapRouter = new PoolSwapTest(manager);
         swapRouterNoChecks = new SwapRouterNoChecks(manager);
@@ -627,7 +626,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         feeController = new ProtocolFeeControllerTest();
         actionsRouter = new ActionsRouter(manager);
 
-        manager.setProtocolFeeController(feeController);
+        // manager.setProtocolFeeController(feeController);
     }
 
     function custom_ApproveCurrency(Currency currency) internal {
