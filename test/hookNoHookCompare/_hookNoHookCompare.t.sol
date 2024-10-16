@@ -20,7 +20,7 @@ import {BalanceDelta, BalanceDeltaLibrary} from "v4-core/src/types/BalanceDelta.
 import {TestInvalidERC20} from "v4-core/src/test/TestInvalidERC20.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {PoolEmptyUnlockTest} from "v4-core/src/test/PoolEmptyUnlockTest.sol";
-import {PoolId} from "v4-core/src/types/PoolId.sol";
+import {PoolId, PoolIdLibrary} from "v4-core/src/types/PoolId.sol";
 import {LPFeeLibrary} from "v4-core/src/libraries/LPFeeLibrary.sol";
 import {Position} from "v4-core/src/libraries/Position.sol";
 import {Constants} from "v4-core/test/utils/Constants.sol";
@@ -33,6 +33,7 @@ import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 import {IQuoter} from "v4-periphery/src/interfaces/IQuoter.sol";
 import {Quoter} from "v4-periphery/src/lens/Quoter.sol";
 import {PathKey} from "v4-periphery/src/libraries/PathKey.sol";
+
 
 // Routers
 import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
@@ -81,15 +82,20 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     );
 
     uint24 constant MAX_PROTOCOL_FEE_BOTH_TOKENS = (1000 << 12) | 1000; // 1000 1000
-
+    using PoolIdLibrary for PoolKey;
+    PoolKey inputkey;
+    PoolKey emptyHook;
+    address hookAddr;
+    Quoter quoter;
     IPoolManager.ModifyLiquidityParams public CUSTOM_LIQUIDITY_PARAMS;
     IPoolManager.ModifyLiquidityParams public CUSTOM_REMOVE_LIQUIDITY_PARAMS;
-    IPoolManager.SwapParams public CUSTOM_SWAP_PARAMS;
+    IPoolManager.SwapParams public CUSTOM_SWAP_PARAMS =
+        IPoolManager.SwapParams({zeroForOne: true, amountSpecified: -100, sqrtPriceLimitX96: SQRT_PRICE_1_2});
 
-    PoolKey inputkey;
-    Quoter quoter;
     function setUp() public {
-        string memory code_json = vm.readFile("test/inputPoolkey/Allhook.json");
+        console.log("setup start :",gasleft());
+        // string memory code_json = vm.readFile("test/inputPoolkey/patched_TakeProfitsHook.json");
+        string memory code_json = vm.readFile("test/hookNoHookCompare/patched_Allhook.json");
 
         address _currency0 = vm.parseJsonAddress(code_json, ".data.currency0");
         address _currency1 = vm.parseJsonAddress(code_json, ".data.currency1");
@@ -103,11 +109,12 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         inputkey.tickSpacing = _tickSpacing;
         inputkey.hooks = IHooks(_hooks);
 
+        checkFlag();
+        
+        hookAddr = address(inputkey.hooks);
+        
         CUSTOM_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({tickLower: -(2*_tickSpacing), tickUpper: (2*_tickSpacing), liquidityDelta: 1e18, salt: 0});
         CUSTOM_REMOVE_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({tickLower: -(2*_tickSpacing), tickUpper: (2*_tickSpacing), liquidityDelta: -1e18, salt: 0});
-
-        // checkFlag();
-
         custom_deployFreshManagerAndRouters();
         if (!inputkey.currency0.isAddressZero()) custom_ApproveCurrency(inputkey.currency0);
         custom_ApproveCurrency(inputkey.currency1);
@@ -120,407 +127,232 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         }
 
         key = inputkey;
-
-        if (key.currency0.isAddressZero())
-            modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-        else
-            modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-        
-        currency0 = key.currency0;
-        currency1 = key.currency1;
+        (emptyHook,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(address(0)), inputkey.fee, inputkey.tickSpacing, sqrtPriceX96, ZERO_BYTES);
+        console.log("setup end:",gasleft());
     }
 
-    function test_addLiquidity_6909() public {
-        // convert test tokens into ERC6909 claims
-        if (currency0.isAddressZero())
-            claimsRouter.deposit{value: 10_000 ether}(currency0, address(this), 10_000e18);
-        else
-            claimsRouter.deposit(currency0, address(this), 10_000e18);
-        claimsRouter.deposit(currency1, address(this), 10_000e18);
-        assertEq(manager.balanceOf(address(this), currency0.toId()), 10_000e18);
-        assertEq(manager.balanceOf(address(this), currency1.toId()), 10_000e18);
-
-        uint256 currency0BalanceBefore = currency0.balanceOfSelf();
-        uint256 currency1BalanceBefore = currency1.balanceOfSelf();
-        uint256 currency0PMBalanceBefore = currency0.balanceOf(address(manager));
-        uint256 currency1PMBalanceBefore = currency1.balanceOf(address(manager));
-
-        // allow liquidity router to burn our 6909 tokens
-        manager.setOperator(address(modifyLiquidityRouter), true);
-
-        // add liquidity with 6909: settleUsingBurn=true, takeClaims=true (unused)
-        modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES, true, true);
-
-        assertLt(manager.balanceOf(address(this), currency0.toId()), 10_000e18);
-        assertLt(manager.balanceOf(address(this), currency1.toId()), 10_000e18);
-
-        // ERC20s are unspent
-        assertEq(currency0.balanceOfSelf(), currency0BalanceBefore);
-        assertEq(currency1.balanceOfSelf(), currency1BalanceBefore);
-
-        // PoolManager did not receive net-new ERC20s
-        assertEq(currency0.balanceOf(address(manager)), currency0PMBalanceBefore);
-        assertEq(currency1.balanceOf(address(manager)), currency1PMBalanceBefore);
+    function test_addLiquidity_compare() public{
+        uint256 snapshot = vm.snapshot();
+        test_addLiquidity(inputkey);
+        vm.revertTo(snapshot);
+        test_addLiquidity(emptyHook);
+        vm.revertTo(snapshot);
     }
 
-    function test_removeLiquidity_6909() public {
-        if (key.currency0.isAddressZero())
-            modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-        else
-            modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
+    function test_addLiquidity(PoolKey memory keys) internal {
+        if (
+            !Hooks.hasPermission(inputkey.hooks, Hooks.BEFORE_ADD_LIQUIDITY_FLAG) &&
+            !Hooks.hasPermission(inputkey.hooks, Hooks.AFTER_ADD_LIQUIDITY_FLAG)
+        ) {
+            emit log_string("Skip Test");
+            return;
+        }
+        uint256 start;
+        uint256 end;
+        if (keys.currency0.isAddressZero()) {
 
-        assertEq(manager.balanceOf(address(this), currency0.toId()), 0);
-        assertEq(manager.balanceOf(address(this), currency1.toId()), 0);
-
-        uint256 currency0BalanceBefore = currency0.balanceOfSelf();
-        uint256 currency1BalanceBefore = currency1.balanceOfSelf();
-        uint256 currency0PMBalanceBefore = currency0.balanceOf(address(manager));
-        uint256 currency1PMBalanceBefore = currency1.balanceOf(address(manager));
-
-        // remove liquidity as 6909: settleUsingBurn=true (unused), takeClaims=true
-        modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_REMOVE_LIQUIDITY_PARAMS, ZERO_BYTES, true, true);
-
-        assertTrue(manager.balanceOf(address(this), currency0.toId()) > 0);
-        assertTrue(manager.balanceOf(address(this), currency1.toId()) > 0);
-
-        // ERC20s are unspent
-        assertEq(currency0.balanceOfSelf(), currency0BalanceBefore);
-        assertEq(currency1.balanceOfSelf(), currency1BalanceBefore);
-
-        // PoolManager did lose ERC-20s
-        assertEq(currency0.balanceOf(address(manager)), currency0PMBalanceBefore);
-        assertEq(currency1.balanceOf(address(manager)), currency1PMBalanceBefore);
-    }
-
-    function test_addLiquidity_secondAdditionSameRange_gas() public {
-        IPoolManager.ModifyLiquidityParams memory uniqueParams =
-            IPoolManager.ModifyLiquidityParams({tickLower: -(5*key.tickSpacing), tickUpper: -(3*key.tickSpacing), liquidityDelta: 1e18, salt: 0});
-        modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
-        modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
-        snapLastCall("simple addLiquidity second addition same range");
-    }
-
-    function test_removeLiquidity_someLiquidityRemains_gas() public {
-        // add double the liquidity to remove
-        IPoolManager.ModifyLiquidityParams memory uniqueParams =
-            IPoolManager.ModifyLiquidityParams({tickLower: -(5*key.tickSpacing), tickUpper: -(3*key.tickSpacing), liquidityDelta: 1e18, salt: 0});
-        modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
-
-        uniqueParams.liquidityDelta /= -2;
-        modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
-        snapLastCall("simple removeLiquidity some liquidity remains");
-    }
-
-    function test_addLiquidity_gas() public {
-        if (currency0.isAddressZero())
-            modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-        else
-            modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-        snapLastCall("simple addLiquidity");
-    }
-
-    function test_removeLiquidity_gas() public {
-        modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_REMOVE_LIQUIDITY_PARAMS, ZERO_BYTES);
-        snapLastCall("simple removeLiquidity");
-    }
-
-    function test_swap_succeedsIfInitialized() public {
-        PoolSwapTest.TestSettings memory testSettings =
-            PoolSwapTest.TestSettings({takeClaims: true, settleUsingBurn: false});
-        
-        if (currency0.isAddressZero())
-            swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-        else
-            swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-    }
-
-    function test_swap_succeeds() public {
-        PoolSwapTest.TestSettings memory testSettings =
-            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
-
-        if (currency0.isAddressZero())
-            swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-        else
-            swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-    }
-
-    function test_swap_gas() public {
-        if (currency0.isAddressZero())
-            swapRouterNoChecks.swap{value: 100}(key, SWAP_PARAMS);
-        else
-            swapRouterNoChecks.swap(key, SWAP_PARAMS);
-        snapLastCall("simple swap");
-    }
-
-    function test_swap_mint6909IfOutputNotTaken_gas() public {
-        IPoolManager.SwapParams memory params =
-            IPoolManager.SwapParams({zeroForOne: false, amountSpecified: -100, sqrtPriceLimitX96: SQRT_PRICE_2_1});
-
-        PoolSwapTest.TestSettings memory testSettings =
-            PoolSwapTest.TestSettings({takeClaims: true, settleUsingBurn: false});
-
-        if (currency0.isAddressZero())
-            swapRouter.swap(key, params, testSettings, ZERO_BYTES);
-        else
-            swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-
-        snapLastCall("swap mint output as 6909");
-    }
-
-    function test_swap_burn6909AsInput_gas() public {
-        IPoolManager.SwapParams memory params =
-            IPoolManager.SwapParams({zeroForOne: false, amountSpecified: -100, sqrtPriceLimitX96: SQRT_PRICE_2_1});
-
-        PoolSwapTest.TestSettings memory testSettings =
-            PoolSwapTest.TestSettings({takeClaims: true, settleUsingBurn: false});
-
-        if (currency0.isAddressZero()) {
-            swapRouter.swap(key, params, testSettings, ZERO_BYTES);
-            params = IPoolManager.SwapParams({zeroForOne: true, amountSpecified: 25, sqrtPriceLimitX96: SQRT_PRICE_1_4});
+            vm.pauseGasMetering();
+            start = gasleft();
+            vm.resumeGasMetering();
+            modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(keys, LIQUIDITY_PARAMS, ZERO_BYTES);
+            vm.pauseGasMetering();
+            end = gasleft();
+            vm.resumeGasMetering();
+            
         }
         else {
-            swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-            params = IPoolManager.SwapParams({zeroForOne: false, amountSpecified: 25, sqrtPriceLimitX96: SQRT_PRICE_4_1});
+            vm.pauseGasMetering();
+            start = gasleft();
+            vm.resumeGasMetering();
+            modifyLiquidityRouter.modifyLiquidity(keys, LIQUIDITY_PARAMS, ZERO_BYTES);
+            vm.pauseGasMetering();
+            end = gasleft();
+            vm.resumeGasMetering();
+
+            
         }
-
-        // give permission for swapRouter to burn the 6909s
-        manager.setOperator(address(swapRouter), true);
-
-        // swap from currency1 to currency0 again, using 6909s as input tokens
-        testSettings = PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: true});
-
-        swapRouter.swap(key, params, testSettings, ZERO_BYTES);
-        snapLastCall("swap burn 6909 for input");
-    }
-
-    function test_swap_againstLiquidity_gas() public {
-        PoolSwapTest.TestSettings memory testSettings =
-            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
-
-        IPoolManager.SwapParams memory params =
-            IPoolManager.SwapParams({zeroForOne: true, amountSpecified: -100, sqrtPriceLimitX96: SQRT_PRICE_1_4});
+        if( address(keys.hooks) == address(0x0) ){
+            console.log("no-hook-add-gas-using : ", start - end);
+        }
+        else{
+            console.log("hook-add-gas-using : ", start - end);
+        }
         
-        if (currency0.isAddressZero()) {
-            swapRouter.swap{value: 1 ether}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-            swapRouter.swap{value: 1 ether}(key, params, testSettings, ZERO_BYTES);
+
+    }
+    function test_removeLiquidity_compare() public{
+        uint256 snapshot = vm.snapshot();      
+        test_removeLiquidity(inputkey);
+        vm.revertTo(snapshot);
+        test_removeLiquidity(emptyHook);
+        vm.revertTo(snapshot);
+
+    }
+    function test_removeLiquidity(PoolKey memory keys) internal {
+        if (
+            !Hooks.hasPermission(inputkey.hooks, Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG) &&
+            !Hooks.hasPermission(inputkey.hooks, Hooks.AFTER_REMOVE_LIQUIDITY_FLAG)
+        ) {
+            emit log_string("Skip Test");
+            return;
+        }
+        uint256 start;
+        uint256 end;
+        if (keys.currency0.isAddressZero()) {
+            
+            modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(keys, LIQUIDITY_PARAMS, ZERO_BYTES);
+
+            vm.pauseGasMetering();
+            start = gasleft();
+            vm.resumeGasMetering();
+            modifyLiquidityRouter.modifyLiquidity(keys, REMOVE_LIQUIDITY_PARAMS, ZERO_BYTES);
+            vm.pauseGasMetering();
+            end = gasleft();
+            vm.resumeGasMetering();
+
+            
         }
         else {
-            swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-            swapRouter.swap(key, params, testSettings, ZERO_BYTES);
-        }   
-        snapLastCall("swap against liquidity");
-    }
+            modifyLiquidityRouter.modifyLiquidity(keys, LIQUIDITY_PARAMS, ZERO_BYTES);
 
-    function test_swap_accruesProtocolFees(uint16 protocolFee0, uint16 protocolFee1, int256 amountSpecified) public {
-        protocolFee0 = uint16(bound(protocolFee0, 0, 1000));
-        protocolFee1 = uint16(bound(protocolFee1, 0, 1000));
-        vm.assume(amountSpecified != 0);
+            vm.pauseGasMetering();
+            start = gasleft();
+            vm.resumeGasMetering();
+            modifyLiquidityRouter.modifyLiquidity(keys, REMOVE_LIQUIDITY_PARAMS, ZERO_BYTES);
+            vm.pauseGasMetering();
+            end = gasleft();
+            vm.resumeGasMetering();
 
-        uint24 protocolFee = (uint24(protocolFee1) << 12) | uint24(protocolFee0);
-
-        (,, uint24 slot0ProtocolFee,) = manager.getSlot0(key.toId());
-        assertEq(slot0ProtocolFee, 0);
-
-        vm.prank(address(feeController));
-        manager.setProtocolFee(key, protocolFee);
-
-        (,, slot0ProtocolFee,) = manager.getSlot0(key.toId());
-        assertEq(slot0ProtocolFee, protocolFee);
-
-        // Add liquidity - Fees dont accrue for positive liquidity delta.
-        IPoolManager.ModifyLiquidityParams memory params = CUSTOM_LIQUIDITY_PARAMS;
-        if (currency0.isAddressZero()) 
-            modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES);
-        else 
-            modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES);
-
-        assertEq(manager.protocolFeesAccrued(currency0), 0);
-        assertEq(manager.protocolFeesAccrued(currency1), 0);
-
-        // Remove liquidity - Fees dont accrue for negative liquidity delta.
-        params.liquidityDelta = -CUSTOM_LIQUIDITY_PARAMS.liquidityDelta;
-        modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES);
-
-        assertEq(manager.protocolFeesAccrued(currency0), 0);
-        assertEq(manager.protocolFeesAccrued(currency1), 0);
-
-        // Now re-add the liquidity to test swap
-        params.liquidityDelta = CUSTOM_LIQUIDITY_PARAMS.liquidityDelta;
-        if (currency0.isAddressZero()) 
-            modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES);
-        else 
-            modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES);
-
-        IPoolManager.SwapParams memory swapParams =
-            IPoolManager.SwapParams(false, amountSpecified, TickMath.MAX_SQRT_PRICE - 1);
-        BalanceDelta delta;
-        if (currency0.isAddressZero()) 
-            delta = swapRouter.swap{value: 100}(key, swapParams, PoolSwapTest.TestSettings(false, false), ZERO_BYTES);
-        else 
-            delta = swapRouter.swap(key, swapParams, PoolSwapTest.TestSettings(false, false), ZERO_BYTES);
-        uint256 expectedProtocolFee =
-            uint256(uint128(-delta.amount1())) * protocolFee1 / ProtocolFeeLibrary.PIPS_DENOMINATOR;
-        assertEq(manager.protocolFeesAccrued(currency0), 0);
-        assertEq(manager.protocolFeesAccrued(currency1), expectedProtocolFee);
-    }
-
-    // test successful donation if pool has liquidity
-    function test_donate_succeedsWhenPoolHasLiquidity() public {
-        (uint256 feeGrowthGlobal0X128, uint256 feeGrowthGlobal1X128) = manager.getFeeGrowthGlobals(key.toId());
-        assertEq(feeGrowthGlobal0X128, 0);
-        assertEq(feeGrowthGlobal1X128, 0);
-
-        if (currency0.isAddressZero())
-            donateRouter.donate{value: 100}(key, 100, 200, ZERO_BYTES);
-        else
-            donateRouter.donate(key, 100, 200, ZERO_BYTES);
-
-        snapLastCall("donate gas with 2 tokens");
-
-        (feeGrowthGlobal0X128, feeGrowthGlobal1X128) = manager.getFeeGrowthGlobals(key.toId());
-        assertEq(feeGrowthGlobal0X128, 34028236692093846346337);
-        assertEq(feeGrowthGlobal1X128, 68056473384187692692674);
-    }
-
-    function test_donate_OneToken_gas() public {
-        donateRouter.donate(key, 0, 100, ZERO_BYTES);
-        snapLastCall("donate gas with 1 token");
-    }
-
-    function test_fuzz_donate_emits_event(uint256 amount0, uint256 amount1) public {
-        amount0 = bound(amount0, 0, uint256(int256(type(int128).max)));
-        amount1 = bound(amount1, 0, uint256(int256(type(int128).max)));
-
-        vm.expectEmit(true, true, false, true, address(manager));
-        emit Donate(key.toId(), address(donateRouter), uint256(amount0), uint256(amount1));
-        if (currency0.isAddressZero()) {
-            vm.deal(address(this), Constants.MAX_UINT256);
-            donateRouter.donate{value: amount0}(key, amount0, amount1, ZERO_BYTES);
         }
-        else
-            donateRouter.donate(key, amount0, amount1, ZERO_BYTES);
-    }
-
-    function test_collectProtocolFees_ERC20_accumulateFees_gas() public {
-        uint256 expectedFees = 10;
-
-        (,, uint24 slot0ProtocolFee,) = manager.getSlot0(key.toId());
-        assertEq(slot0ProtocolFee, 0);
-
-        vm.prank(address(feeController));
-        manager.setProtocolFee(key, MAX_PROTOCOL_FEE_BOTH_TOKENS);
-
-        (,, slot0ProtocolFee,) = manager.getSlot0(key.toId());
-        assertEq(slot0ProtocolFee, MAX_PROTOCOL_FEE_BOTH_TOKENS);
-
-        if (currency0.isAddressZero())
-            swapRouter.swap{value: 10000}(
-                key,
-                IPoolManager.SwapParams(true, -10000, SQRT_PRICE_1_2),
-                PoolSwapTest.TestSettings(false, false),
-                ZERO_BYTES
-            );
-        else
-            swapRouter.swap(
-                key,
-                IPoolManager.SwapParams(true, -10000, SQRT_PRICE_1_2),
-                PoolSwapTest.TestSettings(false, false),
-                ZERO_BYTES
-            );
-
-        assertEq(manager.protocolFeesAccrued(currency0), expectedFees);
-        assertEq(manager.protocolFeesAccrued(currency1), 0);
-        assertEq(currency0.balanceOf(address(31337)), 0);
-        vm.prank(address(feeController));
-        manager.collectProtocolFees(address(31337), currency0, expectedFees);
-        snapLastCall("erc20 collect protocol fees");
-        assertEq(currency0.balanceOf(address(31337)), expectedFees);
-        assertEq(manager.protocolFeesAccrued(currency0), 0);
-    }
-
-    function test_collectProtocolFees_ERC20_accumulateFees_exactOutput() public {
-        uint256 expectedFees = 10;
-
-        (,, uint24 slot0ProtocolFee,) = manager.getSlot0(key.toId());
-        assertEq(slot0ProtocolFee, 0);
-
-        vm.prank(address(feeController));
-        manager.setProtocolFee(key, MAX_PROTOCOL_FEE_BOTH_TOKENS);
-
-        (,, slot0ProtocolFee,) = manager.getSlot0(key.toId());
-        assertEq(slot0ProtocolFee, MAX_PROTOCOL_FEE_BOTH_TOKENS);
-
-        if (currency0.isAddressZero())
-            swapRouter.swap{value: 10000}(
-                key,
-                IPoolManager.SwapParams(true, -10000, SQRT_PRICE_1_2),
-                PoolSwapTest.TestSettings(false, false),
-                ZERO_BYTES
-            );
-        else
-            swapRouter.swap(
-                key,
-                IPoolManager.SwapParams(true, -10000, SQRT_PRICE_1_2),
-                PoolSwapTest.TestSettings(false, false),
-                ZERO_BYTES
-            );
-
-        assertEq(manager.protocolFeesAccrued(currency0), expectedFees);
-        assertEq(manager.protocolFeesAccrued(currency1), 0);
-        assertEq(currency0.balanceOf(address(31337)), 0);
-        vm.prank(address(feeController));
-        manager.collectProtocolFees(address(31337), currency0, expectedFees);
-        assertEq(currency0.balanceOf(address(31337)), expectedFees);
-        assertEq(manager.protocolFeesAccrued(currency0), 0);
-    }
-
-    function test_collectProtocolFees_ERC20_returnsAllFeesIf0IsProvidedAsParameter() public {
-        uint256 expectedFees = 10;
-
-        (,, uint24 slot0ProtocolFee,) = manager.getSlot0(key.toId());
-        assertEq(slot0ProtocolFee, 0);
-
-        vm.prank(address(feeController));
-        manager.setProtocolFee(key, MAX_PROTOCOL_FEE_BOTH_TOKENS);
-
-        (,, slot0ProtocolFee,) = manager.getSlot0(key.toId());
-        assertEq(slot0ProtocolFee, MAX_PROTOCOL_FEE_BOTH_TOKENS);
-
-        if (currency0.isAddressZero()) {
-            swapRouter.swap{value: 10000}(
-                key,
-                IPoolManager.SwapParams(true, -10000, SQRT_PRICE_1_2),
-                PoolSwapTest.TestSettings(false, false),
-                ZERO_BYTES
-            );
-            assertEq(manager.protocolFeesAccrued(currency0), expectedFees);
-            assertEq(manager.protocolFeesAccrued(currency1), 0);
-            assertEq(currency0.balanceOf(address(31337)), 0);
-            vm.prank(address(feeController));
-            manager.collectProtocolFees(address(31337), currency0, 0);
-            assertEq(currency0.balanceOf(address(31337)), expectedFees);
-            assertEq(manager.protocolFeesAccrued(currency0), 0);
+        if( address(keys.hooks) == address(0x0) ){
+            console.log("no-hook-remove-gas-using : ", start - end);
         }
-        else {
-            swapRouter.swap(
-                key,
-                IPoolManager.SwapParams(false, -10000, TickMath.MAX_SQRT_PRICE - 1),
-                PoolSwapTest.TestSettings(false, false),
-                ZERO_BYTES
-            );
-            assertEq(manager.protocolFeesAccrued(currency0), 0);
-            assertEq(manager.protocolFeesAccrued(currency1), expectedFees);
-            assertEq(currency1.balanceOf(address(31337)), 0);
-            vm.prank(address(feeController));
-            manager.collectProtocolFees(address(31337), currency1, 0);
-            assertEq(currency1.balanceOf(address(31337)), expectedFees);
-            assertEq(manager.protocolFeesAccrued(currency1), 0);
+        else{
+            console.log("hook-remove-gas-using : ", start - end);
+        }
+        
+    }
+    function test_donate_compare() public{
+        uint256 snapshot = vm.snapshot();
+        test_donate(inputkey);
+        vm.revertTo(snapshot);
+        test_donate(emptyHook);
+    }
+    function test_donate(PoolKey memory keys) internal {
+        if (
+            !Hooks.hasPermission(inputkey.hooks, Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG) &&
+            !Hooks.hasPermission(inputkey.hooks, Hooks.AFTER_REMOVE_LIQUIDITY_FLAG)
+        ) {
+            emit log_string("Skip Test");
+            return;
+        }
+        uint256 start;
+        uint256 end;
+        if (keys.currency0.isAddressZero()){
+            modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(keys, LIQUIDITY_PARAMS, ZERO_BYTES);
+
+            vm.pauseGasMetering();
+            start = gasleft();
+            vm.resumeGasMetering();
+            donateRouter.donate{value: 100}(keys, 100, 200, ZERO_BYTES);
+            vm.pauseGasMetering();
+            end = gasleft();
+            vm.resumeGasMetering();
+            
+        }
+        else{
+            modifyLiquidityRouter.modifyLiquidity(keys, LIQUIDITY_PARAMS, ZERO_BYTES);
+
+            vm.pauseGasMetering();
+            start = gasleft();
+            vm.resumeGasMetering();
+            donateRouter.donate(keys, 100, 200, ZERO_BYTES);
+            vm.pauseGasMetering();
+            end = gasleft();
+            vm.resumeGasMetering();
+            
+        }
+
+        if( address(keys.hooks) == address(0x0) ){
+            console.log("no-hook-donate-gas-using : ", start - end);
+        }
+        else{
+            console.log("hook-doante-gas-using : ", start - end);
+        }
+
+    }
+
+    function test_swap_compare() public{
+        console.log(gasleft());
+        uint256 snapshot = vm.snapshot();      
+        test_swap(inputkey);
+        vm.revertTo(snapshot);
+        test_swap(emptyHook);
+        vm.revertTo(snapshot);
+    }
+
+    function test_swap(PoolKey memory keys) internal {
+        if (
+            !Hooks.hasPermission(inputkey.hooks, Hooks.BEFORE_SWAP_FLAG) &&
+            !Hooks.hasPermission(inputkey.hooks, Hooks.AFTER_SWAP_FLAG)
+        ) {
+            emit log_string("Skip Test");
+            return;
+        }
+        uint256 start;
+        uint256 end;
+        
+        PoolSwapTest.TestSettings memory testSettings = PoolSwapTest.TestSettings({takeClaims: true, settleUsingBurn: false});
+
+        BalanceDelta balance;
+        if (inputkey.currency0.isAddressZero()){
+            modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(keys, LIQUIDITY_PARAMS, ZERO_BYTES);
+
+
+            vm.pauseGasMetering();
+            start = gasleft();
+            vm.resumeGasMetering();
+            balance = swapRouter.swap{value: 100}(keys, CUSTOM_SWAP_PARAMS, testSettings, ZERO_BYTES);
+            vm.pauseGasMetering();
+            end = gasleft();
+            vm.resumeGasMetering();
+
+        } 
+        else{
+            modifyLiquidityRouter.modifyLiquidity(keys, LIQUIDITY_PARAMS, ZERO_BYTES);
+
+            vm.pauseGasMetering();
+            start = gasleft();
+            vm.resumeGasMetering();
+            balance = swapRouter.swap(keys, CUSTOM_SWAP_PARAMS, testSettings, ZERO_BYTES);
+            vm.pauseGasMetering();
+            end = gasleft();
+            vm.resumeGasMetering();
+
+        }
+
+        (uint160 sqrtPrice,int24 tick,uint24 protocolFee,uint24 lpFee ) = manager.getSlot0(keys.toId());
+        if(address(keys.hooks) == address(0x0)){
+            
+            console.log("no-hook-Swap-protocolFee-using : ", protocolFee);
+            console.log("no-hook-Swap-lpFee-using : ", lpFee);
+            console.log("no-hook-Swap-balance-amount0-using : ",balance.amount0());
+            console.log("no-hook-Swap-balance-amount1-using : ",balance.amount1());
+            console.log("no-hook-swap-gas-using : ", start - end);
+        }
+        else{
+            console.log("hook-Swap-protocolFee-using : ", protocolFee);
+            console.log("hook-Swap-lpFee-using : ", lpFee);
+            console.log("hook-Swap-balance-amount0-using : ",balance.amount0());
+            console.log("hook-Swap-balance-amount1-using : ",balance.amount1());
+            console.log("hook-swap-gas-using : ", start - end);
         }
     }
 
     function custom_deployFreshManagerAndRouters() internal {
         // unichain-sepolia
-        manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
+        // manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
+        manager = new PoolManager();
 
         swapRouter = new PoolSwapTest(manager);
         swapRouterNoChecks = new SwapRouterNoChecks(manager);
@@ -533,7 +365,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         feeController = new ProtocolFeeControllerTest();
         actionsRouter = new ActionsRouter(manager);
 
-        vm.prank(0x762a34656662F1ecbC033D8c6b34B77E4eA435B7); // manager owner
         manager.setProtocolFeeController(feeController);
 
         quoter = new Quoter(IPoolManager(manager));
@@ -542,7 +373,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     function custom_ApproveCurrency(Currency currency) internal {
         MockERC20 token = MockERC20(Currency.unwrap(currency));
         
-        deal(address(token), address(this), Constants.MAX_UINT256);
+        deal(address(token), address(this), type(uint256).max);
         address[9] memory toApprove = [
             address(swapRouter),
             address(swapRouterNoChecks),
