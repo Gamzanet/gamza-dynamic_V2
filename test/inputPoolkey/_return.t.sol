@@ -30,9 +30,6 @@ import {ProtocolFeeLibrary} from "v4-core/src/libraries/ProtocolFeeLibrary.sol";
 import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
 
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
-import {IQuoter} from "v4-periphery/src/interfaces/IQuoter.sol";
-import {Quoter} from "v4-periphery/src/lens/Quoter.sol";
-import {PathKey} from "v4-periphery/src/libraries/PathKey.sol";
 import {LiquidityAmounts} from "v4-core/test/utils/LiquidityAmounts.sol";
 
 // Routers
