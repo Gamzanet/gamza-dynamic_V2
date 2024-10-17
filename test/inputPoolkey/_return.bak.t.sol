@@ -30,6 +30,9 @@ import {ProtocolFeeLibrary} from "v4-core/src/libraries/ProtocolFeeLibrary.sol";
 import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
 
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+import {IQuoter} from "v4-periphery/src/interfaces/IQuoter.sol";
+import {Quoter} from "v4-periphery/src/lens/Quoter.sol";
+import {PathKey} from "v4-periphery/src/libraries/PathKey.sol";
 import {LiquidityAmounts} from "v4-core/test/utils/LiquidityAmounts.sol";
 
 // Routers
@@ -84,6 +87,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     IPoolManager.ModifyLiquidityParams public CUSTOM_REMOVE_LIQUIDITY_PARAMS;
     IPoolManager.SwapParams public CUSTOM_SWAP_PARAMS;
 
+    Quoter quoter;
     function setUp() public {
         string memory code_json = vm.readFile("test/inputPoolkey/Allhook.json");
 
@@ -159,6 +163,46 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         console.log();
     }
 
+    function test_addLiquidity6909_return_delta() public {
+        if (currency0.isAddressZero())
+            claimsRouter.deposit{value: 10_000 ether}(currency0, address(this), 10_000 ether);
+        else
+            claimsRouter.deposit(currency0, address(this), 10_000 ether);
+        claimsRouter.deposit(currency1, address(this), 10_000 ether);
+        manager.setOperator(address(modifyLiquidityRouter), true);
+
+        IPoolManager.ModifyLiquidityParams memory params = custom_seedMoreLiquidity(key, 1 ether, 1 ether);
+        BalanceDelta delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, true, false);
+
+        console.log();
+        console.log("****** addLiquidity6909 DELTA *******");
+        console.log("amount0 delta:", delta.amount0());
+        console.log("amount1 delta:", delta.amount1());
+        console.log("*************************************");
+        console.log();
+    }
+
+    function test_removeLiquidity6909_return_delta() public {
+        IPoolManager.ModifyLiquidityParams memory params = 
+            custom_seedMoreLiquidity(key, 1 ether, 1 ether);
+
+        if (currency0.isAddressZero())
+            modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES);
+        else
+            modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES);
+        
+        params.liquidityDelta = -params.liquidityDelta;
+        BalanceDelta delta;
+        delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, true, false);
+
+        console.log();
+        console.log("***** removeLiquidity6909 DELTA *****");
+        console.log("amount0 delta:", delta.amount0());
+        console.log("amount1 delta:", delta.amount1());
+        console.log("*************************************");
+        console.log();
+    }
+
     function test_swap_return_delta() public {
         PoolSwapTest.TestSettings memory testSettings =
             PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
@@ -177,6 +221,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         console.log();
     }
 
+    function test_swap6909_return_delta() public {}
+
     function test_donate_return_delta() public {
         BalanceDelta delta;
         if (currency0.isAddressZero())
@@ -190,19 +236,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         console.log("amount1 delta:", delta.amount1());
         console.log("*************************************");
         console.log();
-    }
-
-    function test_6909() public {
-        deal(address(Currency.unwrap(currency1)), address(31337), 1 ether);
-        emit log_uint(currency1.balanceOf(address(31337)));
-        vm.prank(address(31337));
-        MockERC20(Currency.unwrap(currency1)).approve(address(claimsRouter), 1 ether);
-        vm.prank(address(31337));
-        claimsRouter.deposit(currency1, address(31337), 1 ether);
-
-        emit log_uint(manager.balanceOf(address(31337), currency1.toId()));
-        vm.prank(address(31337));
-        claimsRouter.withdraw(currency1, address(31337), 1 ether);
     }
 
     function custom_deployFreshManagerAndRouters() internal {
@@ -222,6 +255,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         vm.prank(0x762a34656662F1ecbC033D8c6b34B77E4eA435B7); // manager owner
         manager.setProtocolFeeController(feeController);
+
+        quoter = new Quoter(IPoolManager(manager));
     }
 
     function custom_ApproveCurrency(Currency currency, uint256 amount) internal {

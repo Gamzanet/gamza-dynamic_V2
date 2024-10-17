@@ -30,9 +30,6 @@ import {ProtocolFeeLibrary} from "v4-core/src/libraries/ProtocolFeeLibrary.sol";
 import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
 
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
-import {IQuoter} from "v4-periphery/src/interfaces/IQuoter.sol";
-import {Quoter} from "v4-periphery/src/lens/Quoter.sol";
-import {PathKey} from "v4-periphery/src/libraries/PathKey.sol";
 
 // Routers
 import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
@@ -86,8 +83,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     IPoolManager.ModifyLiquidityParams public CUSTOM_REMOVE_LIQUIDITY_PARAMS;
     IPoolManager.SwapParams public CUSTOM_SWAP_PARAMS;
 
-    PoolKey inputkey;
-    Quoter quoter;
     function setUp() public {
         string memory code_json = vm.readFile("test/inputPoolkey/Allhook.json");
 
@@ -97,48 +92,42 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         int24 _tickSpacing = int24(vm.parseJsonInt(code_json, ".data.tickSpacing"));
         address _hooks = vm.parseJsonAddress(code_json, ".data.hooks");
 
-        inputkey.currency0 = Currency.wrap(_currency0);
-        inputkey.currency1 = Currency.wrap(_currency1);
-        inputkey.fee = _fee;
-        inputkey.tickSpacing = _tickSpacing;
-        inputkey.hooks = IHooks(_hooks);
+        key.currency0 = Currency.wrap(_currency0);
+        key.currency1 = Currency.wrap(_currency1);
+        key.fee = _fee;
+        key.tickSpacing = _tickSpacing;
+        key.hooks = IHooks(_hooks);
+        (currency0, currency1) = (key.currency0, key.currency1);
 
-        CUSTOM_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({tickLower: -(2*_tickSpacing), tickUpper: (2*_tickSpacing), liquidityDelta: 1e18, salt: 0});
-        CUSTOM_REMOVE_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({tickLower: -(2*_tickSpacing), tickUpper: (2*_tickSpacing), liquidityDelta: -1e18, salt: 0});
-
-        // checkFlag();
+        CUSTOM_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({tickLower: -(2*_tickSpacing), tickUpper: (2*_tickSpacing), liquidityDelta: 1 ether, salt: 0});
+        CUSTOM_REMOVE_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({tickLower: -(2*_tickSpacing), tickUpper: (2*_tickSpacing), liquidityDelta: -1 ether, salt: 0});
 
         custom_deployFreshManagerAndRouters();
-        if (!inputkey.currency0.isAddressZero()) custom_ApproveCurrency(inputkey.currency0);
-        custom_ApproveCurrency(inputkey.currency1);
+        if (!currency0.isAddressZero()) custom_ApproveCurrency(key.currency0, Constants.MAX_UINT256);
+        custom_ApproveCurrency(key.currency1, Constants.MAX_UINT256);
 
         // check initialized
-        (uint160 sqrtPriceX96,,,) = manager.getSlot0(inputkey.toId());
+        (uint160 sqrtPriceX96,,,) = manager.getSlot0(key.toId());
         if (sqrtPriceX96 == 0) {
-            initPool(inputkey.currency0, inputkey.currency1, inputkey.hooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
+            initPool(key.currency0, key.currency1, key.hooks, key.fee, key.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             sqrtPriceX96 = SQRT_PRICE_1_1;
         }
 
-        key = inputkey;
-
-        if (key.currency0.isAddressZero())
+        if (currency0.isAddressZero())
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-        
-        currency0 = key.currency0;
-        currency1 = key.currency1;
     }
 
     function test_addLiquidity_6909() public {
         // convert test tokens into ERC6909 claims
         if (currency0.isAddressZero())
-            claimsRouter.deposit{value: 10_000 ether}(currency0, address(this), 10_000e18);
+            claimsRouter.deposit{value: 10_000 ether}(currency0, address(this), 10_000 ether);
         else
-            claimsRouter.deposit(currency0, address(this), 10_000e18);
-        claimsRouter.deposit(currency1, address(this), 10_000e18);
-        assertEq(manager.balanceOf(address(this), currency0.toId()), 10_000e18);
-        assertEq(manager.balanceOf(address(this), currency1.toId()), 10_000e18);
+            claimsRouter.deposit(currency0, address(this), 10_000 ether);
+        claimsRouter.deposit(currency1, address(this), 10_000 ether);
+        assertEq(manager.balanceOf(address(this), currency0.toId()), 10_000 ether);
+        assertEq(manager.balanceOf(address(this), currency1.toId()), 10_000 ether);
 
         uint256 currency0BalanceBefore = currency0.balanceOfSelf();
         uint256 currency1BalanceBefore = currency1.balanceOfSelf();
@@ -151,8 +140,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         // add liquidity with 6909: settleUsingBurn=true, takeClaims=true (unused)
         modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES, true, true);
 
-        assertLt(manager.balanceOf(address(this), currency0.toId()), 10_000e18);
-        assertLt(manager.balanceOf(address(this), currency1.toId()), 10_000e18);
+        assertLt(manager.balanceOf(address(this), currency0.toId()), 10_000 ether);
+        assertLt(manager.balanceOf(address(this), currency1.toId()), 10_000 ether);
 
         // ERC20s are unspent
         assertEq(currency0.balanceOfSelf(), currency0BalanceBefore);
@@ -194,7 +183,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
     function test_addLiquidity_secondAdditionSameRange_gas() public {
         IPoolManager.ModifyLiquidityParams memory uniqueParams =
-            IPoolManager.ModifyLiquidityParams({tickLower: -(5*key.tickSpacing), tickUpper: -(3*key.tickSpacing), liquidityDelta: 1e18, salt: 0});
+            IPoolManager.ModifyLiquidityParams({tickLower: -(5*key.tickSpacing), tickUpper: -(3*key.tickSpacing), liquidityDelta: 1 ether, salt: 0});
         modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
         modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
         snapLastCall("simple addLiquidity second addition same range");
@@ -203,7 +192,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     function test_removeLiquidity_someLiquidityRemains_gas() public {
         // add double the liquidity to remove
         IPoolManager.ModifyLiquidityParams memory uniqueParams =
-            IPoolManager.ModifyLiquidityParams({tickLower: -(5*key.tickSpacing), tickUpper: -(3*key.tickSpacing), liquidityDelta: 1e18, salt: 0});
+            IPoolManager.ModifyLiquidityParams({tickLower: -(5*key.tickSpacing), tickUpper: -(3*key.tickSpacing), liquidityDelta: 1 ether, salt: 0});
         modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
 
         uniqueParams.liquidityDelta /= -2;
@@ -228,16 +217,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         PoolSwapTest.TestSettings memory testSettings =
             PoolSwapTest.TestSettings({takeClaims: true, settleUsingBurn: false});
         
-        if (currency0.isAddressZero())
-            swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-        else
-            swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-    }
-
-    function test_swap_succeeds() public {
-        PoolSwapTest.TestSettings memory testSettings =
-            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
-
         if (currency0.isAddressZero())
             swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
         else
@@ -535,14 +514,12 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         vm.prank(0x762a34656662F1ecbC033D8c6b34B77E4eA435B7); // manager owner
         manager.setProtocolFeeController(feeController);
-
-        quoter = new Quoter(IPoolManager(manager));
     }
 
-    function custom_ApproveCurrency(Currency currency) internal {
+    function custom_ApproveCurrency(Currency currency, uint256 amount) internal {
         MockERC20 token = MockERC20(Currency.unwrap(currency));
         
-        deal(address(token), address(this), Constants.MAX_UINT256);
+        deal(address(token), address(this), amount);
         address[9] memory toApprove = [
             address(swapRouter),
             address(swapRouterNoChecks),
@@ -556,15 +533,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         ];
 
         for (uint256 i = 0; i < toApprove.length; i++) {
-            token.approve(toApprove[i], Constants.MAX_UINT256);
+            token.approve(toApprove[i], amount);
         }
-    }
-
-    event permission(Hooks.Permissions);
-    function checkFlag() public {
-        Hooks.Permissions memory flag;
-        (,bytes memory returnData) = address(inputkey.hooks).call(abi.encodeWithSignature("getHookPermissions()"));
-        flag = abi.decode(returnData, (Hooks.Permissions));
-        emit permission(flag);
     }
 }
