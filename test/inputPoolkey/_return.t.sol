@@ -148,6 +148,19 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         console.log();
     }
 
+    function test_6909() public {
+        deal(address(Currency.unwrap(currency1)), address(31337), 1 ether);
+        emit log_uint(currency1.balanceOf(address(31337)));
+        vm.prank(address(31337));
+        MockERC20(Currency.unwrap(currency1)).approve(address(claimsRouter), 1 ether);
+        vm.prank(address(31337));
+        claimsRouter.deposit(currency1, address(31337), 1 ether);
+
+        emit log_uint(manager.balanceOf(address(31337), currency1.toId()));
+        vm.prank(address(31337));
+        claimsRouter.withdraw(currency1, address(31337), 1 ether);
+    }
+
     function custom_deployFreshManagerAndRouters() internal {
         // unichain-sepolia
         manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
