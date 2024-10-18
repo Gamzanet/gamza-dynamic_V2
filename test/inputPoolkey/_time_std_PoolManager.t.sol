@@ -102,8 +102,10 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     
     Quoter quoter;
     function setUp() public {
-        //string memory code_json = vm.readFile("test/inputPoolkey/patched_TakeProfitsHook.json");
-        string memory code_json = vm.readFile("test/inputPoolkey/Allhook.json");
+        string memory directory = vm.envString("_data_location"); // ../../src/data
+        string memory dataPath = vm.envString("_targetPoolKey"); // asdf.json
+        string memory filePath = string.concat(directory, dataPath);
+        string memory code_json = vm.readFile(filePath);
 
         address _currency0 = vm.parseJsonAddress(code_json, ".data.currency0");
         address _currency1 = vm.parseJsonAddress(code_json, ".data.currency1");
