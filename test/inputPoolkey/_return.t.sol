@@ -132,8 +132,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         console.log();
         console.log("******** addLiquidity DELTA *********");
-        console.log("amount0 delta:", delta.amount0());
-        console.log("amount1 delta:", delta.amount1());
+        console.log("addLiquidity-amount0-delta-log:", delta.amount0());
+        console.log("addLiquidity-amount1-delta-log:", delta.amount1());
         console.log("*************************************");
         console.log();
     }
@@ -153,8 +153,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         console.log();
         console.log("******* removeLiquidity DELTA *******");
-        console.log("amount0 delta:", delta.amount0());
-        console.log("amount1 delta:", delta.amount1());
+        console.log("removeLiquidity-amount0-delta-log:", delta.amount0());
+        console.log("removeLiquidity-amount1-delta-log:", delta.amount1());
         console.log("*************************************");
         console.log();
     }
@@ -171,8 +171,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         console.log();
         console.log("************ SWAP DELTA *************");
-        console.log("amount0 delta:", delta.amount0());
-        console.log("amount1 delta:", delta.amount1());
+        console.log("swap-amount0-delta-log:", delta.amount0());
+        console.log("swap-amount1-delta-log:", delta.amount1());
         console.log("*************************************");
         console.log();
     }
@@ -186,8 +186,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         console.log();
         console.log("*********** Donate DELTA ************");
-        console.log("amount0 delta:", delta.amount0());
-        console.log("amount1 delta:", delta.amount1());
+        console.log("donate-amount0-delta-log:", delta.amount0());
+        console.log("donate-amount1-delta-log:", delta.amount1());
         console.log("*************************************");
         console.log();
     }

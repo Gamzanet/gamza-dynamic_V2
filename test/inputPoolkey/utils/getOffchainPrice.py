@@ -26,8 +26,10 @@ def get_token_id(token_symbol):
 
 def get_token_price(response_body):
     # Parse the response body (assuming it's a JSON string)
+    print("response_body :{}".format(response_body))
+    print(response_body)
+
     data = json.loads(response_body)
-    
     # Extract the price and exponent
     price = int(data['parsed'][0]['price']['price'])
     expo = int(data['parsed'][0]['price']['expo'])
