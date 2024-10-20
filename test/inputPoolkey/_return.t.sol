@@ -124,6 +124,15 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         IPoolManager.ModifyLiquidityParams memory params = 
             custom_seedMoreLiquidity(key, 1 ether, 1 ether);
 
+        uint256 poolMangerBalance0_prev = key.currency0.balanceOf(address(manager));
+        uint256 poolMangerBalance1_prev = key.currency1.balanceOf(address(manager));
+
+        uint256 hookBalance0_prev = key.currency0.balanceOf(address(key.hooks));
+        uint256 hookBalance1_prev = key.currency1.balanceOf(address(key.hooks));
+
+        uint256 thisBalance0_prev = key.currency0.balanceOf(address(this));
+        uint256 thisBalance1_prev = key.currency1.balanceOf(address(this));
+
         BalanceDelta delta;
         if (currency0.isAddressZero())
             delta = modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES, false, false);
@@ -136,11 +145,40 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         console.log("amount1 delta:", delta.amount1());
         console.log("*************************************");
         console.log();
+
+        uint256 poolMangerBalance0 = key.currency0.balanceOf(address(manager));
+        uint256 poolMangerBalance1 = key.currency1.balanceOf(address(manager));
+
+        uint256 hookBalance0 = key.currency0.balanceOf(address(key.hooks));
+        uint256 hookBalance1 = key.currency1.balanceOf(address(key.hooks));
+
+        uint256 thisBalance0 = key.currency0.balanceOf(address(this));
+        uint256 thisBalance1 = key.currency1.balanceOf(address(this));
+
+        console.log();
+        console.log("******** addLiquidity Balance DELTA *********");
+        console.log("poolMangeAmount0 addLiquidity-delta:", - int(poolMangerBalance0_prev) + int(poolMangerBalance0));
+        console.log("poolMangeAmount1 addLiquidity-delta:", - int(poolMangerBalance1_prev) + int(poolMangerBalance1));
+        console.log("hookAmount0 addLiquidity-delta:", - int(hookBalance0_prev) + int(hookBalance0));
+        console.log("hookAmount1 addLiquidity-delta:", - int(hookBalance1_prev) + int(hookBalance1));
+        console.log("thisAmount0 addLiquidity-delta:", - int(thisBalance0_prev) + int(thisBalance0));
+        console.log("thisAmount1 addLiquidity-delta:", - int(thisBalance1_prev) + int(thisBalance1));
+        console.log("*************************************");
+        console.log();
     }
 
     function test_removeLiquidity_return_delta() public {
         IPoolManager.ModifyLiquidityParams memory params = 
             custom_seedMoreLiquidity(key, 1 ether, 1 ether);
+
+        uint256 poolMangerBalance0_prev = key.currency0.balanceOf(address(manager));
+        uint256 poolMangerBalance1_prev = key.currency1.balanceOf(address(manager));
+
+        uint256 hookBalance0_prev = key.currency0.balanceOf(address(key.hooks));
+        uint256 hookBalance1_prev = key.currency1.balanceOf(address(key.hooks));
+
+        uint256 thisBalance0_prev = key.currency0.balanceOf(address(this));
+        uint256 thisBalance1_prev = key.currency1.balanceOf(address(this));
 
         if (currency0.isAddressZero())
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES, false, false);
@@ -149,7 +187,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         
         params.liquidityDelta = -params.liquidityDelta;
         BalanceDelta delta;
-        delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, false);
+        delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, true);
 
         console.log();
         console.log("******* removeLiquidity DELTA *******");
@@ -157,11 +195,40 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         console.log("amount1 delta:", delta.amount1());
         console.log("*************************************");
         console.log();
+
+        uint256 poolMangerBalance0 = key.currency0.balanceOf(address(manager));
+        uint256 poolMangerBalance1 = key.currency1.balanceOf(address(manager));
+
+        uint256 hookBalance0 = key.currency0.balanceOf(address(key.hooks));
+        uint256 hookBalance1 = key.currency1.balanceOf(address(key.hooks));
+
+        uint256 thisBalance0 = key.currency0.balanceOf(address(this));
+        uint256 thisBalance1 = key.currency1.balanceOf(address(this));
+
+        console.log();
+        console.log("******** removeLiquidity Balance DELTA *********");
+        console.log("poolMangeAmount0 removeLiquidity-delta:", - int(poolMangerBalance0_prev) + int(poolMangerBalance0));
+        console.log("poolMangeAmount1 removeLiquidity-delta:", - int(poolMangerBalance1_prev) + int(poolMangerBalance1));
+        console.log("hookAmount0 removeLiquidity-delta:", - int(hookBalance0_prev) + int(hookBalance0));
+        console.log("hookAmount1 removeLiquidity-delta:", - int(hookBalance1_prev) + int(hookBalance1));
+        console.log("thisAmount0 removeLiquidity-delta:", - int(thisBalance0_prev) + int(thisBalance0));
+        console.log("thisAmount1 removeLiquidity-delta:", - int(thisBalance1_prev) + int(thisBalance1));
+        console.log("*************************************");
+        console.log();
     }
 
     function test_swap_return_delta() public {
         PoolSwapTest.TestSettings memory testSettings =
             PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
+
+        uint256 poolMangerBalance0_prev = key.currency0.balanceOf(address(manager));
+        uint256 poolMangerBalance1_prev = key.currency1.balanceOf(address(manager));
+
+        uint256 hookBalance0_prev = key.currency0.balanceOf(address(key.hooks));
+        uint256 hookBalance1_prev = key.currency1.balanceOf(address(key.hooks));
+
+        uint256 thisBalance0_prev = key.currency0.balanceOf(address(this));
+        uint256 thisBalance1_prev = key.currency1.balanceOf(address(this));
 
         BalanceDelta delta;
         if (currency0.isAddressZero())
@@ -175,9 +242,42 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         console.log("amount1 delta:", delta.amount1());
         console.log("*************************************");
         console.log();
+
+
+        uint256 poolMangerBalance0 = key.currency0.balanceOf(address(manager));
+        uint256 poolMangerBalance1 = key.currency1.balanceOf(address(manager));
+
+        uint256 hookBalance0 = key.currency0.balanceOf(address(key.hooks));
+        uint256 hookBalance1 = key.currency1.balanceOf(address(key.hooks));
+
+        uint256 thisBalance0 = key.currency0.balanceOf(address(this));
+        uint256 thisBalance1 = key.currency1.balanceOf(address(this));
+
+        console.log();
+        console.log("******** swap Balance DELTA *********");
+        console.log("poolMangeAmount0 swap-delta:", - int(poolMangerBalance0_prev) + int(poolMangerBalance0));
+        console.log("poolMangeAmount1 swap-delta:", - int(poolMangerBalance1_prev) + int(poolMangerBalance1));
+        console.log("hookAmount0 swap-delta:", - int(hookBalance0_prev) + int(hookBalance0));
+        console.log("hookAmount1 swap-delta:", - int(hookBalance1_prev) + int(hookBalance1));
+        console.log("thisAmount0 swap-delta:", - int(thisBalance0_prev) + int(thisBalance0));
+        console.log("thisAmount1 swap-delta:", - int(thisBalance1_prev) + int(thisBalance1));
+        console.log("*************************************");
+        console.log();
     }
 
     function test_donate_return_delta() public {
+
+
+        uint256 poolMangerBalance0_prev = key.currency0.balanceOf(address(manager));
+        uint256 poolMangerBalance1_prev = key.currency1.balanceOf(address(manager));
+
+        uint256 hookBalance0_prev = key.currency0.balanceOf(address(key.hooks));
+        uint256 hookBalance1_prev = key.currency1.balanceOf(address(key.hooks));
+
+        uint256 thisBalance0_prev = key.currency0.balanceOf(address(this));
+        uint256 thisBalance1_prev = key.currency1.balanceOf(address(this));
+
+
         BalanceDelta delta;
         if (currency0.isAddressZero())
             delta = donateRouter.donate{value: 100}(key, 100, 100, ZERO_BYTES);
@@ -188,6 +288,27 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         console.log("*********** Donate DELTA ************");
         console.log("amount0 delta:", delta.amount0());
         console.log("amount1 delta:", delta.amount1());
+        console.log("*************************************");
+        console.log();
+
+
+        uint256 poolMangerBalance0 = key.currency0.balanceOf(address(manager));
+        uint256 poolMangerBalance1 = key.currency1.balanceOf(address(manager));
+
+        uint256 hookBalance0 = key.currency0.balanceOf(address(key.hooks));
+        uint256 hookBalance1 = key.currency1.balanceOf(address(key.hooks));
+
+        uint256 thisBalance0 = key.currency0.balanceOf(address(this));
+        uint256 thisBalance1 = key.currency1.balanceOf(address(this));
+
+        console.log();
+        console.log("******** donate Balance DELTA *********");
+        console.log("poolMangeAmount0 donate-delta:", - int(poolMangerBalance0_prev) + int(poolMangerBalance0));
+        console.log("poolMangeAmount1 donate-delta:", - int(poolMangerBalance1_prev) + int(poolMangerBalance1));
+        console.log("hookAmount0 donate-delta:", - int(hookBalance0_prev) + int(hookBalance0));
+        console.log("hookAmount1 donate-delta:", - int(hookBalance1_prev) + int(hookBalance1));
+        console.log("thisAmount0 donate-delta:", - int(thisBalance0_prev) + int(thisBalance0));
+        console.log("thisAmount1 donate-delta:", - int(thisBalance1_prev) + int(thisBalance1));
         console.log("*************************************");
         console.log();
     }
