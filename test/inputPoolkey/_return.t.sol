@@ -124,193 +124,63 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         IPoolManager.ModifyLiquidityParams memory params = 
             custom_seedMoreLiquidity(key, 1 ether, 1 ether);
 
-        uint256 poolMangerBalance0_prev = key.currency0.balanceOf(address(manager));
-        uint256 poolMangerBalance1_prev = key.currency1.balanceOf(address(manager));
-
-        uint256 hookBalance0_prev = key.currency0.balanceOf(address(key.hooks));
-        uint256 hookBalance1_prev = key.currency1.balanceOf(address(key.hooks));
-
-        uint256 thisBalance0_prev = key.currency0.balanceOf(address(this));
-        uint256 thisBalance1_prev = key.currency1.balanceOf(address(this));
-
-        BalanceDelta delta;
-        if (currency0.isAddressZero())
-            delta = modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES, false, false);
-        else
-            delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, false);
-
-        console.log();
-        console.log("******** addLiquidity DELTA *********");
-        console.log("amount0 delta:", delta.amount0());
-        console.log("amount1 delta:", delta.amount1());
-        console.log("*************************************");
-        console.log();
-
-        uint256 poolMangerBalance0 = key.currency0.balanceOf(address(manager));
-        uint256 poolMangerBalance1 = key.currency1.balanceOf(address(manager));
-
-        uint256 hookBalance0 = key.currency0.balanceOf(address(key.hooks));
-        uint256 hookBalance1 = key.currency1.balanceOf(address(key.hooks));
-
-        uint256 thisBalance0 = key.currency0.balanceOf(address(this));
-        uint256 thisBalance1 = key.currency1.balanceOf(address(this));
-
-        console.log();
-        console.log("******** addLiquidity Balance DELTA *********");
-        console.log("poolMangeAmount0 addLiquidity-delta:", - int(poolMangerBalance0_prev) + int(poolMangerBalance0));
-        console.log("poolMangeAmount1 addLiquidity-delta:", - int(poolMangerBalance1_prev) + int(poolMangerBalance1));
-        console.log("hookAmount0 addLiquidity-delta:", - int(hookBalance0_prev) + int(hookBalance0));
-        console.log("hookAmount1 addLiquidity-delta:", - int(hookBalance1_prev) + int(hookBalance1));
-        console.log("thisAmount0 addLiquidity-delta:", - int(thisBalance0_prev) + int(thisBalance0));
-        console.log("thisAmount1 addLiquidity-delta:", - int(thisBalance1_prev) + int(thisBalance1));
-        console.log("*************************************");
-        console.log();
+        snap_balance();
+        {
+            BalanceDelta delta;
+            if (currency0.isAddressZero())
+                delta = modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES, false, false);
+            else
+                delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, false);
+            log_delta(delta, "addLiquidity DELTA");
+        }
+        log_balance("addLiquidity Balance DELTA");
     }
 
     function test_removeLiquidity_return_delta() public {
         IPoolManager.ModifyLiquidityParams memory params = 
             custom_seedMoreLiquidity(key, 1 ether, 1 ether);
-
-        uint256 poolMangerBalance0_prev = key.currency0.balanceOf(address(manager));
-        uint256 poolMangerBalance1_prev = key.currency1.balanceOf(address(manager));
-
-        uint256 hookBalance0_prev = key.currency0.balanceOf(address(key.hooks));
-        uint256 hookBalance1_prev = key.currency1.balanceOf(address(key.hooks));
-
-        uint256 thisBalance0_prev = key.currency0.balanceOf(address(this));
-        uint256 thisBalance1_prev = key.currency1.balanceOf(address(this));
-
         if (currency0.isAddressZero())
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES, false, false);
         else
             modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, false);
-        
-        params.liquidityDelta = -params.liquidityDelta;
-        BalanceDelta delta;
-        delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, true);
-
-        console.log();
-        console.log("******* removeLiquidity DELTA *******");
-        console.log("amount0 delta:", delta.amount0());
-        console.log("amount1 delta:", delta.amount1());
-        console.log("*************************************");
-        console.log();
-
-        uint256 poolMangerBalance0 = key.currency0.balanceOf(address(manager));
-        uint256 poolMangerBalance1 = key.currency1.balanceOf(address(manager));
-
-        uint256 hookBalance0 = key.currency0.balanceOf(address(key.hooks));
-        uint256 hookBalance1 = key.currency1.balanceOf(address(key.hooks));
-
-        uint256 thisBalance0 = key.currency0.balanceOf(address(this));
-        uint256 thisBalance1 = key.currency1.balanceOf(address(this));
-
-        console.log();
-        console.log("******** removeLiquidity Balance DELTA *********");
-        console.log("poolMangeAmount0 removeLiquidity-delta:", - int(poolMangerBalance0_prev) + int(poolMangerBalance0));
-        console.log("poolMangeAmount1 removeLiquidity-delta:", - int(poolMangerBalance1_prev) + int(poolMangerBalance1));
-        console.log("hookAmount0 removeLiquidity-delta:", - int(hookBalance0_prev) + int(hookBalance0));
-        console.log("hookAmount1 removeLiquidity-delta:", - int(hookBalance1_prev) + int(hookBalance1));
-        console.log("thisAmount0 removeLiquidity-delta:", - int(thisBalance0_prev) + int(thisBalance0));
-        console.log("thisAmount1 removeLiquidity-delta:", - int(thisBalance1_prev) + int(thisBalance1));
-        console.log("*************************************");
-        console.log();
+            
+        snap_balance();
+        {
+            params.liquidityDelta = -params.liquidityDelta;
+            BalanceDelta delta;
+            delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, false);
+            log_delta(delta, "removeLiquidity DELTA");
+        }
+        log_balance("removeLiquidity Balance DELTA");
     }
 
     function test_swap_return_delta() public {
         PoolSwapTest.TestSettings memory testSettings =
             PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
-
-        uint256 poolMangerBalance0_prev = key.currency0.balanceOf(address(manager));
-        uint256 poolMangerBalance1_prev = key.currency1.balanceOf(address(manager));
-
-        uint256 hookBalance0_prev = key.currency0.balanceOf(address(key.hooks));
-        uint256 hookBalance1_prev = key.currency1.balanceOf(address(key.hooks));
-
-        uint256 thisBalance0_prev = key.currency0.balanceOf(address(this));
-        uint256 thisBalance1_prev = key.currency1.balanceOf(address(this));
-
-        BalanceDelta delta;
-        if (currency0.isAddressZero())
-            delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-        else
-            delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-
-        console.log();
-        console.log("************ SWAP DELTA *************");
-        console.log("amount0 delta:", delta.amount0());
-        console.log("amount1 delta:", delta.amount1());
-        console.log("*************************************");
-        console.log();
-
-
-        uint256 poolMangerBalance0 = key.currency0.balanceOf(address(manager));
-        uint256 poolMangerBalance1 = key.currency1.balanceOf(address(manager));
-
-        uint256 hookBalance0 = key.currency0.balanceOf(address(key.hooks));
-        uint256 hookBalance1 = key.currency1.balanceOf(address(key.hooks));
-
-        uint256 thisBalance0 = key.currency0.balanceOf(address(this));
-        uint256 thisBalance1 = key.currency1.balanceOf(address(this));
-
-        console.log();
-        console.log("******** swap Balance DELTA *********");
-        console.log("poolMangeAmount0 swap-delta:", - int(poolMangerBalance0_prev) + int(poolMangerBalance0));
-        console.log("poolMangeAmount1 swap-delta:", - int(poolMangerBalance1_prev) + int(poolMangerBalance1));
-        console.log("hookAmount0 swap-delta:", - int(hookBalance0_prev) + int(hookBalance0));
-        console.log("hookAmount1 swap-delta:", - int(hookBalance1_prev) + int(hookBalance1));
-        console.log("thisAmount0 swap-delta:", - int(thisBalance0_prev) + int(thisBalance0));
-        console.log("thisAmount1 swap-delta:", - int(thisBalance1_prev) + int(thisBalance1));
-        console.log("*************************************");
-        console.log();
+            
+        snap_balance();
+        {
+            BalanceDelta delta;
+            if (currency0.isAddressZero())
+                delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            else
+                delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            log_delta(delta, "SWAP DELTA");
+        }
+        log_balance("swap Balance DELTA");
     }
 
     function test_donate_return_delta() public {
-
-
-        uint256 poolMangerBalance0_prev = key.currency0.balanceOf(address(manager));
-        uint256 poolMangerBalance1_prev = key.currency1.balanceOf(address(manager));
-
-        uint256 hookBalance0_prev = key.currency0.balanceOf(address(key.hooks));
-        uint256 hookBalance1_prev = key.currency1.balanceOf(address(key.hooks));
-
-        uint256 thisBalance0_prev = key.currency0.balanceOf(address(this));
-        uint256 thisBalance1_prev = key.currency1.balanceOf(address(this));
-
-
-        BalanceDelta delta;
-        if (currency0.isAddressZero())
-            delta = donateRouter.donate{value: 100}(key, 100, 100, ZERO_BYTES);
-        else
-            delta = donateRouter.donate(key, 100, 100, ZERO_BYTES);
-
-        console.log();
-        console.log("*********** Donate DELTA ************");
-        console.log("amount0 delta:", delta.amount0());
-        console.log("amount1 delta:", delta.amount1());
-        console.log("*************************************");
-        console.log();
-
-
-        uint256 poolMangerBalance0 = key.currency0.balanceOf(address(manager));
-        uint256 poolMangerBalance1 = key.currency1.balanceOf(address(manager));
-
-        uint256 hookBalance0 = key.currency0.balanceOf(address(key.hooks));
-        uint256 hookBalance1 = key.currency1.balanceOf(address(key.hooks));
-
-        uint256 thisBalance0 = key.currency0.balanceOf(address(this));
-        uint256 thisBalance1 = key.currency1.balanceOf(address(this));
-
-        console.log();
-        console.log("******** donate Balance DELTA *********");
-        console.log("poolMangeAmount0 donate-delta:", - int(poolMangerBalance0_prev) + int(poolMangerBalance0));
-        console.log("poolMangeAmount1 donate-delta:", - int(poolMangerBalance1_prev) + int(poolMangerBalance1));
-        console.log("hookAmount0 donate-delta:", - int(hookBalance0_prev) + int(hookBalance0));
-        console.log("hookAmount1 donate-delta:", - int(hookBalance1_prev) + int(hookBalance1));
-        console.log("thisAmount0 donate-delta:", - int(thisBalance0_prev) + int(thisBalance0));
-        console.log("thisAmount1 donate-delta:", - int(thisBalance1_prev) + int(thisBalance1));
-        console.log("*************************************");
-        console.log();
+        snap_balance();
+        {
+            BalanceDelta delta;
+            if (currency0.isAddressZero())
+                delta = donateRouter.donate{value: 100}(key, 100, 100, ZERO_BYTES);
+            else
+                delta = donateRouter.donate(key, 100, 100, ZERO_BYTES);
+            log_delta(delta, "Donate DELTA");
+        }
+        log_balance("donate Balance DELTA");
     }
 
     function custom_deployFreshManagerAndRouters() internal {
@@ -372,5 +242,74 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             liquidityDelta: int128(liquidityDelta),
             salt: 0
         });
+    }
+
+    function log_delta(BalanceDelta delta, string memory str) internal view {
+        uint256 totalLength = 40; // 전체 라인의 길이 (중앙의 문자열 포함)
+        uint256 strLength = bytes(str).length;
+        uint256 starCount = (totalLength - strLength) / 2; // 좌우 별의 개수
+
+        // 좌우 별을 맞추기 위해 공백을 고려한 정렬
+        string memory leftStars = _repeat("*", starCount);
+        string memory rightStars = _repeat("*", totalLength - starCount - strLength);
+
+        console.log();
+        console.log(string(abi.encodePacked(leftStars, " ", str, " ", rightStars)));
+        console.log("amount0 delta:", delta.amount0());
+        console.log("amount1 delta:", delta.amount1());
+        console.log(_repeat("*", totalLength + 2));
+        console.log();
+    }
+
+    struct UsersBalance {
+        uint256 managerBalance0;
+        uint256 managerBalance1;
+        
+        uint256 hookBalance0;
+        uint256 hookBalance1;
+
+        uint256 userBalance0;
+        uint256 userBalance1;
+    }
+    UsersBalance userBalance;
+    function snap_balance() internal {
+        userBalance.managerBalance0 = currency0.balanceOf(address(manager));
+        userBalance.managerBalance1 = currency1.balanceOf(address(manager));
+
+        userBalance.hookBalance0 = currency0.balanceOf(address(key.hooks));
+        userBalance.hookBalance1 = currency1.balanceOf(address(key.hooks));
+
+        userBalance.userBalance0 = currency0.balanceOf(address(this));
+        userBalance.userBalance1 = currency1.balanceOf(address(this));
+    }
+
+    function log_balance(string memory str) internal view {
+        uint256 totalLength = 50; // 전체 라인의 길이 (중앙의 문자열 포함)
+        uint256 strLength = bytes(str).length;
+        uint256 starCount = (totalLength - strLength) / 2; // 좌우 별의 개수
+
+        // 좌우 별을 맞추기 위해 공백을 고려한 정렬
+        string memory leftStars = _repeat("*", starCount);
+        string memory rightStars = _repeat("*", totalLength - starCount - strLength);
+
+        console.log();
+        console.log(string(abi.encodePacked(leftStars, " ", str, " ", rightStars)));
+        console.log("mangerAmount0 delta:", - int(userBalance.managerBalance0) + int(currency0.balanceOf(address(manager))));
+        console.log("mangerAmount1 delta:", - int(userBalance.managerBalance1) + int(currency1.balanceOf(address(manager))));
+        console.log("hookAmount0 delta:", - int(userBalance.hookBalance0) + int(currency0.balanceOf(address(key.hooks))));
+        console.log("hookAmount1 delta:", - int(userBalance.hookBalance1) + int(currency1.balanceOf(address(key.hooks))));
+        console.log("userAmount0 delta:", - int(userBalance.userBalance0) + int(currency0.balanceOf(address(this))));
+        console.log("userAmount1 delta:", - int(userBalance.userBalance1) + int(currency1.balanceOf(address(this))));
+        console.log(_repeat("*", totalLength + 2));
+        console.log();
+    }
+
+    // 별 반복 생성 함수
+    function _repeat(string memory s, uint256 times) internal pure returns (string memory) {
+        string memory result = "";
+        for (uint256 i = 0; i < times; i++) {
+            result = string(abi.encodePacked(result, s));
+        }
+        return result;
     }
 }

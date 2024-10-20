@@ -84,7 +84,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     IPoolManager.SwapParams public CUSTOM_SWAP_PARAMS;
 
     function setUp() public {
-        string memory code_json = vm.readFile("test/inputPoolkey/asdf.json");
+        string memory code_json = vm.readFile("test/inputPoolkey/Allhook.json");
 
         address _currency0 = vm.parseJsonAddress(code_json, ".data.currency0");
         address _currency1 = vm.parseJsonAddress(code_json, ".data.currency1");
