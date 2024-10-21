@@ -131,9 +131,9 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
                 delta = modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES, false, false);
             else
                 delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, false);
-            log_delta(delta, "addLiquidity DELTA");
+            log_delta(delta, "addLiquidity");
         }
-        log_balance("addLiquidity Balance DELTA");
+        log_balance("addLiquidity");
     }
 
     function test_removeLiquidity_return_delta() public {
@@ -149,9 +149,9 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             params.liquidityDelta = -params.liquidityDelta;
             BalanceDelta delta;
             delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, false);
-            log_delta(delta, "removeLiquidity DELTA");
+            log_delta(delta, "removeLiquidity");
         }
-        log_balance("removeLiquidity Balance DELTA");
+        log_balance("removeLiquidity");
     }
 
     function test_swap_return_delta() public {
@@ -165,9 +165,9 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
                 delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             else
                 delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-            log_delta(delta, "SWAP DELTA");
+            log_delta(delta, "SWAP");
         }
-        log_balance("swap Balance DELTA");
+        log_balance("SWAP");
     }
 
     function test_donate_return_delta() public {
@@ -178,9 +178,9 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
                 delta = donateRouter.donate{value: 100}(key, 100, 100, ZERO_BYTES);
             else
                 delta = donateRouter.donate(key, 100, 100, ZERO_BYTES);
-            log_delta(delta, "Donate DELTA");
+            log_delta(delta, "Donate");
         }
-        log_balance("donate Balance DELTA");
+        log_balance("Donate");
     }
 
     function custom_deployFreshManagerAndRouters() internal {
@@ -246,17 +246,20 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
     function log_delta(BalanceDelta delta, string memory str) internal view {
         uint256 totalLength = 40; // 전체 라인의 길이 (중앙의 문자열 포함)
-        uint256 strLength = bytes(str).length;
+        uint256 strLength = bytes(str).length + 6;
         uint256 starCount = (totalLength - strLength) / 2; // 좌우 별의 개수
 
         // 좌우 별을 맞추기 위해 공백을 고려한 정렬
         string memory leftStars = _repeat("*", starCount);
         string memory rightStars = _repeat("*", totalLength - starCount - strLength);
 
+        string memory amount0 = string(abi.encodePacked(str,"-amount0 delta:"));
+        string memory amount1 = string(abi.encodePacked(str,"-amount1 delta:"));
+
         console.log();
-        console.log(string(abi.encodePacked(leftStars, " ", str, " ", rightStars)));
-        console.log("amount0 delta:", delta.amount0());
-        console.log("amount1 delta:", delta.amount1());
+        console.log(string(abi.encodePacked(leftStars, " ", str, " DELTA", " ", rightStars)));
+        console.log(amount0, delta.amount0());
+        console.log(amount1, delta.amount1());
         console.log(_repeat("*", totalLength + 2));
         console.log();
     }
@@ -285,21 +288,28 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
     function log_balance(string memory str) internal view {
         uint256 totalLength = 50; // 전체 라인의 길이 (중앙의 문자열 포함)
-        uint256 strLength = bytes(str).length;
+        uint256 strLength = bytes(str).length + 13;
         uint256 starCount = (totalLength - strLength) / 2; // 좌우 별의 개수
 
         // 좌우 별을 맞추기 위해 공백을 고려한 정렬
         string memory leftStars = _repeat("*", starCount);
         string memory rightStars = _repeat("*", totalLength - starCount - strLength);
 
+        string memory mangerAmount0 = string(abi.encodePacked(str,"-mangerAmount0 delta:"));
+        string memory mangerAmount1 = string(abi.encodePacked(str,"-mangerAmount1 delta:"));
+        string memory hookAmount0 = string(abi.encodePacked(str,"-hookAmount0 delta:"));
+        string memory hookAmount1 = string(abi.encodePacked(str,"-hookAmount1 delta:"));
+        string memory userAmount0 = string(abi.encodePacked(str,"-userAmount0 delta:"));
+        string memory userAmount1 = string(abi.encodePacked(str,"-userAmount1 delta:"));
+
         console.log();
-        console.log(string(abi.encodePacked(leftStars, " ", str, " ", rightStars)));
-        console.log("mangerAmount0 delta:", - int(userBalance.managerBalance0) + int(currency0.balanceOf(address(manager))));
-        console.log("mangerAmount1 delta:", - int(userBalance.managerBalance1) + int(currency1.balanceOf(address(manager))));
-        console.log("hookAmount0 delta:", - int(userBalance.hookBalance0) + int(currency0.balanceOf(address(key.hooks))));
-        console.log("hookAmount1 delta:", - int(userBalance.hookBalance1) + int(currency1.balanceOf(address(key.hooks))));
-        console.log("userAmount0 delta:", - int(userBalance.userBalance0) + int(currency0.balanceOf(address(this))));
-        console.log("userAmount1 delta:", - int(userBalance.userBalance1) + int(currency1.balanceOf(address(this))));
+        console.log(string(abi.encodePacked(leftStars, " ", str, " Balance DELTA", " ", rightStars)));
+        console.log(mangerAmount0, - int(userBalance.managerBalance0) + int(currency0.balanceOf(address(manager))));
+        console.log(mangerAmount1, - int(userBalance.managerBalance1) + int(currency1.balanceOf(address(manager))));
+        console.log(hookAmount0, - int(userBalance.hookBalance0) + int(currency0.balanceOf(address(key.hooks))));
+        console.log(hookAmount1, - int(userBalance.hookBalance1) + int(currency1.balanceOf(address(key.hooks))));
+        console.log(userAmount0, - int(userBalance.userBalance0) + int(currency0.balanceOf(address(this))));
+        console.log(userAmount1, - int(userBalance.userBalance1) + int(currency1.balanceOf(address(this))));
         console.log(_repeat("*", totalLength + 2));
         console.log();
     }
