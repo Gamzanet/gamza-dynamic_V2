@@ -44,9 +44,9 @@ contract PoolManagerTest is Test, Deployers {
         key.hooks = IHooks(_hooks);
 
         LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({
-            tickLower: -60,
-            tickUpper: 60,
-            liquidityDelta: 0 ether,
+            tickLower: -key.tickSpacing,
+            tickUpper: key.tickSpacing,
+            liquidityDelta: 100,
             salt: bytes32(0)
         });
         SWAP_PARAMS = IPoolManager.SwapParams({

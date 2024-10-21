@@ -127,72 +127,63 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         IPoolManager.ModifyLiquidityParams memory params = 
             custom_seedMoreLiquidity(key, 1 ether, 1 ether);
 
-        BalanceDelta delta;
-        if (currency0.isAddressZero())
-            delta = modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES, false, false);
-        else
-            delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, false);
-
-        console.log();
-        console.log("******** addLiquidity DELTA *********");
-        console.log("addLiquidity-amount0-delta-log:", delta.amount0());
-        console.log("addLiquidity-amount1-delta-log:", delta.amount1());
-        console.log("*************************************");
-        console.log();
+        snap_balance();
+        {
+            BalanceDelta delta;
+            if (currency0.isAddressZero())
+                delta = modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES, false, false);
+            else
+                delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, false);
+            log_delta(delta, "addLiquidity");
+        }
+        log_balance("addLiquidity");
     }
 
     function test_removeLiquidity_return_delta() public {
         IPoolManager.ModifyLiquidityParams memory params = 
             custom_seedMoreLiquidity(key, 1 ether, 1 ether);
-
         if (currency0.isAddressZero())
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES, false, false);
         else
             modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, false);
-        
-        params.liquidityDelta = -params.liquidityDelta;
-        BalanceDelta delta;
-        delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, false);
-
-        console.log();
-        console.log("******* removeLiquidity DELTA *******");
-        console.log("removeLiquidity-amount0-delta-log:", delta.amount0());
-        console.log("removeLiquidity-amount1-delta-log:", delta.amount1());
-        console.log("*************************************");
-        console.log();
+            
+        snap_balance();
+        {
+            params.liquidityDelta = -params.liquidityDelta;
+            BalanceDelta delta;
+            delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, false);
+            log_delta(delta, "removeLiquidity");
+        }
+        log_balance("removeLiquidity");
     }
 
     function test_swap_return_delta() public {
         PoolSwapTest.TestSettings memory testSettings =
             PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
-
-        BalanceDelta delta;
-        if (currency0.isAddressZero())
-            delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-        else
-            delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-
-        console.log();
-        console.log("************ SWAP DELTA *************");
-        console.log("swap-amount0-delta-log:", delta.amount0());
-        console.log("swap-amount1-delta-log:", delta.amount1());
-        console.log("*************************************");
-        console.log();
+            
+        snap_balance();
+        {
+            BalanceDelta delta;
+            if (currency0.isAddressZero())
+                delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            else
+                delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            log_delta(delta, "SWAP");
+        }
+        log_balance("SWAP");
     }
 
     function test_donate_return_delta() public {
-        BalanceDelta delta;
-        if (currency0.isAddressZero())
-            delta = donateRouter.donate{value: 100}(key, 100, 100, ZERO_BYTES);
-        else
-            delta = donateRouter.donate(key, 100, 100, ZERO_BYTES);
-
-        console.log();
-        console.log("*********** Donate DELTA ************");
-        console.log("donate-amount0-delta-log:", delta.amount0());
-        console.log("donate-amount1-delta-log:", delta.amount1());
-        console.log("*************************************");
-        console.log();
+        snap_balance();
+        {
+            BalanceDelta delta;
+            if (currency0.isAddressZero())
+                delta = donateRouter.donate{value: 100}(key, 100, 100, ZERO_BYTES);
+            else
+                delta = donateRouter.donate(key, 100, 100, ZERO_BYTES);
+            log_delta(delta, "Donate");
+        }
+        log_balance("Donate");
     }
 
     function custom_deployFreshManagerAndRouters() internal {
@@ -254,5 +245,84 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             liquidityDelta: int128(liquidityDelta),
             salt: 0
         });
+    }
+
+    function log_delta(BalanceDelta delta, string memory str) internal view {
+        uint256 totalLength = 40; // 전체 라인의 길이 (중앙의 문자열 포함)
+        uint256 strLength = bytes(str).length + 6;
+        uint256 starCount = (totalLength - strLength) / 2; // 좌우 별의 개수
+
+        // 좌우 별을 맞추기 위해 공백을 고려한 정렬
+        string memory leftStars = _repeat("*", starCount);
+        string memory rightStars = _repeat("*", totalLength - starCount - strLength);
+
+        string memory amount0 = string(abi.encodePacked(str,"-amount0 delta:"));
+        string memory amount1 = string(abi.encodePacked(str,"-amount1 delta:"));
+
+        console.log();
+        console.log(string(abi.encodePacked(leftStars, " ", str, " DELTA", " ", rightStars)));
+        console.log(amount0, delta.amount0());
+        console.log(amount1, delta.amount1());
+        console.log(_repeat("*", totalLength + 2));
+        console.log();
+    }
+
+    struct UsersBalance {
+        uint256 managerBalance0;
+        uint256 managerBalance1;
+        
+        uint256 hookBalance0;
+        uint256 hookBalance1;
+
+        uint256 userBalance0;
+        uint256 userBalance1;
+    }
+    UsersBalance userBalance;
+    function snap_balance() internal {
+        userBalance.managerBalance0 = currency0.balanceOf(address(manager));
+        userBalance.managerBalance1 = currency1.balanceOf(address(manager));
+
+        userBalance.hookBalance0 = currency0.balanceOf(address(key.hooks));
+        userBalance.hookBalance1 = currency1.balanceOf(address(key.hooks));
+
+        userBalance.userBalance0 = currency0.balanceOf(address(this));
+        userBalance.userBalance1 = currency1.balanceOf(address(this));
+    }
+
+    function log_balance(string memory str) internal view {
+        uint256 totalLength = 50; // 전체 라인의 길이 (중앙의 문자열 포함)
+        uint256 strLength = bytes(str).length + 13;
+        uint256 starCount = (totalLength - strLength) / 2; // 좌우 별의 개수
+
+        // 좌우 별을 맞추기 위해 공백을 고려한 정렬
+        string memory leftStars = _repeat("*", starCount);
+        string memory rightStars = _repeat("*", totalLength - starCount - strLength);
+
+        string memory mangerAmount0 = string(abi.encodePacked(str,"-mangerAmount0 delta:"));
+        string memory mangerAmount1 = string(abi.encodePacked(str,"-mangerAmount1 delta:"));
+        string memory hookAmount0 = string(abi.encodePacked(str,"-hookAmount0 delta:"));
+        string memory hookAmount1 = string(abi.encodePacked(str,"-hookAmount1 delta:"));
+        string memory userAmount0 = string(abi.encodePacked(str,"-userAmount0 delta:"));
+        string memory userAmount1 = string(abi.encodePacked(str,"-userAmount1 delta:"));
+
+        console.log();
+        console.log(string(abi.encodePacked(leftStars, " ", str, " Balance DELTA", " ", rightStars)));
+        console.log(mangerAmount0, - int(userBalance.managerBalance0) + int(currency0.balanceOf(address(manager))));
+        console.log(mangerAmount1, - int(userBalance.managerBalance1) + int(currency1.balanceOf(address(manager))));
+        console.log(hookAmount0, - int(userBalance.hookBalance0) + int(currency0.balanceOf(address(key.hooks))));
+        console.log(hookAmount1, - int(userBalance.hookBalance1) + int(currency1.balanceOf(address(key.hooks))));
+        console.log(userAmount0, - int(userBalance.userBalance0) + int(currency0.balanceOf(address(this))));
+        console.log(userAmount1, - int(userBalance.userBalance1) + int(currency1.balanceOf(address(this))));
+        console.log(_repeat("*", totalLength + 2));
+        console.log();
+    }
+
+    // 별 반복 생성 함수
+    function _repeat(string memory s, uint256 times) internal pure returns (string memory) {
+        string memory result = "";
+        for (uint256 i = 0; i < times; i++) {
+            result = string(abi.encodePacked(result, s));
+        }
+        return result;
     }
 }
