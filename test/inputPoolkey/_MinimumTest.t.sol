@@ -84,7 +84,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     IPoolManager.SwapParams public CUSTOM_SWAP_PARAMS;
 
     function setUp() public {
-        string memory code_json = vm.readFile("test/inputPoolkey/gasGrief.json");
+        string memory code_json = vm.readFile("test/inputPoolkey/Allhook.json");
 
         address _currency0 = vm.parseJsonAddress(code_json, ".data.currency0");
         address _currency1 = vm.parseJsonAddress(code_json, ".data.currency1");
@@ -119,7 +119,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         // convert test tokens into ERC6909 claims
         if (currency0.isAddressZero())
             claimsRouter.deposit{value: 10_000 ether}(currency0, address(this), 10_000 ether);
@@ -157,7 +156,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         if (key.currency0.isAddressZero())
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
@@ -191,7 +189,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         IPoolManager.ModifyLiquidityParams memory uniqueParams =
             IPoolManager.ModifyLiquidityParams({tickLower: -(5*key.tickSpacing), tickUpper: -(3*key.tickSpacing), liquidityDelta: 1 ether, salt: 0});
         modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
@@ -204,7 +201,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         // add double the liquidity to remove
         IPoolManager.ModifyLiquidityParams memory uniqueParams =
             IPoolManager.ModifyLiquidityParams({tickLower: -(5*key.tickSpacing), tickUpper: -(3*key.tickSpacing), liquidityDelta: 1 ether, salt: 0});
@@ -220,7 +216,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         if (currency0.isAddressZero())
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
@@ -233,7 +228,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_REMOVE_LIQUIDITY_PARAMS, ZERO_BYTES);
         snapLastCall("simple removeLiquidity");
     }
@@ -243,7 +237,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         PoolSwapTest.TestSettings memory testSettings =
             PoolSwapTest.TestSettings({takeClaims: true, settleUsingBurn: false});
         
@@ -258,7 +251,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         if (currency0.isAddressZero())
             swapRouterNoChecks.swap{value: 100}(key, SWAP_PARAMS);
         else
@@ -271,7 +263,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         IPoolManager.SwapParams memory params =
             IPoolManager.SwapParams({zeroForOne: false, amountSpecified: -100, sqrtPriceLimitX96: SQRT_PRICE_2_1});
 
@@ -291,7 +282,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         IPoolManager.SwapParams memory params =
             IPoolManager.SwapParams({zeroForOne: false, amountSpecified: -100, sqrtPriceLimitX96: SQRT_PRICE_2_1});
 
@@ -322,7 +312,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         PoolSwapTest.TestSettings memory testSettings =
             PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
 
@@ -345,7 +334,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         protocolFee0 = uint16(bound(protocolFee0, 0, 1000));
         protocolFee1 = uint16(bound(protocolFee1, 0, 1000));
         vm.assume(amountSpecified != 0);
@@ -404,7 +392,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         (uint256 feeGrowthGlobal0X128, uint256 feeGrowthGlobal1X128) = manager.getFeeGrowthGlobals(key.toId());
         assertEq(feeGrowthGlobal0X128, 0);
         assertEq(feeGrowthGlobal1X128, 0);
@@ -426,7 +413,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         donateRouter.donate(key, 0, 100, ZERO_BYTES);
         snapLastCall("donate gas with 1 token");
     }
@@ -436,7 +422,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         amount0 = bound(amount0, 0, uint256(int256(type(int128).max)));
         amount1 = bound(amount1, 0, uint256(int256(type(int128).max)));
 
@@ -455,7 +440,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         uint256 expectedFees = 10;
 
         (,, uint24 slot0ProtocolFee,) = manager.getSlot0(key.toId());
@@ -497,7 +481,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         uint256 expectedFees = 10;
 
         (,, uint24 slot0ProtocolFee,) = manager.getSlot0(key.toId());
@@ -538,7 +521,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            
         uint256 expectedFees = 10;
 
         (,, uint24 slot0ProtocolFee,) = manager.getSlot0(key.toId());
