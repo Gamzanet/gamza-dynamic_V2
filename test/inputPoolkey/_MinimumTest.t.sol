@@ -86,7 +86,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     address txOrigin;
     function setUp() public {
         txOrigin = makeAddr("Alice");
-        address deployer = makeAddr("Bob");
         
         string memory directory = vm.envString("_data_location"); // ../../src/data
         string memory dataPath = vm.envString("_targetPoolKey"); // asdf.json
@@ -99,7 +98,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         int24 _tickSpacing = int24(vm.parseJsonInt(code_json, ".data.tickSpacing"));
         address _hooks = vm.parseJsonAddress(code_json, ".data.hooks");
 
-        // deployer = vm.parseJsonAddress(code_json, ".data.deployer");
+        deployer = vm.parseJsonAddress(code_json, ".deployer");
 
         key.currency0 = Currency.wrap(_currency0);
         key.currency1 = Currency.wrap(_currency1);
