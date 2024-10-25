@@ -174,10 +174,10 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             
         }
         if( address(keys.hooks) == address(0x0) ){
-            console.log("no-hook-add-gas-using : ", start - end);
+            console.log("no-hook-add-gas-using : ", (start - end) * tx.gasprice );
         }
         else{
-            console.log("hook-add-gas-using : ", start - end);
+            console.log("hook-add-gas-using : ", (start - end) * tx.gasprice );
         }
         
 
@@ -227,10 +227,10 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         }
         if( address(keys.hooks) == address(0x0) ){
-            console.log("no-hook-remove-gas-using : ", start - end);
+            console.log("no-hook-remove-gas-using : ", (start - end) * tx.gasprice);
         }
         else{
-            console.log("hook-remove-gas-using : ", start - end);
+            console.log("hook-remove-gas-using : ", (start - end) * tx.gasprice);
         }
         
     }
@@ -276,10 +276,10 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         }
 
         if( address(keys.hooks) == address(0x0) ){
-            console.log("no-hook-donate-gas-using : ", start - end);
+            console.log("no-hook-donate-gas-using : ", (start - end) * tx.gasprice );
         }
         else{
-            console.log("hook-doante-gas-using : ", start - end);
+            console.log("hook-doante-gas-using : ",(start - end) * tx.gasprice );
         }
 
     }
@@ -340,14 +340,14 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             console.log("no-hook-Swap-lpFee-using : ", lpFee);
             console.log("no-hook-Swap-balance-amount0-using : ",balance.amount0());
             console.log("no-hook-Swap-balance-amount1-using : ",balance.amount1());
-            console.log("no-hook-swap-gas-using : ", start - end);
+            console.log("no-hook-swap-gas-using : ", (start - end) * tx.gasprice );
         }
         else{
             console.log("hook-Swap-protocolFee-using : ", protocolFee);
             console.log("hook-Swap-lpFee-using : ", lpFee);
             console.log("hook-Swap-balance-amount0-using : ",balance.amount0());
             console.log("hook-Swap-balance-amount1-using : ",balance.amount1());
-            console.log("hook-swap-gas-using : ", start - end);
+            console.log("hook-swap-gas-using : ", (start - end) * tx.gasprice );
         }
     }
 
