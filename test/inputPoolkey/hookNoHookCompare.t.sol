@@ -60,7 +60,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
         console.log("setup end:",gasleft());
     }
 
-    function test_addLiquidity_compare() public{
+    function test_addLiquidity_compare() public {
+        vm.startPrank(txOrigin);
         uint256 snapshot = vm.snapshot();
         test_addLiquidity(key);
         vm.revertTo(snapshot);
@@ -109,14 +110,15 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
         
 
     }
-    function test_removeLiquidity_compare() public{
+    function test_removeLiquidity_compare() public {
+        vm.startPrank(txOrigin);
         uint256 snapshot = vm.snapshot();      
         test_removeLiquidity(key);
         vm.revertTo(snapshot);
         test_removeLiquidity(emptyHook);
         vm.revertTo(snapshot);
-
     }
+
     function test_removeLiquidity(PoolKey memory keys) internal {
         if (
             !Hooks.hasPermission(key.hooks, Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG) &&
@@ -161,12 +163,15 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
         }
         
     }
-    function test_donate_compare() public{
+
+    function test_donate_compare() public {
+        vm.startPrank(txOrigin);
         uint256 snapshot = vm.snapshot();
         test_donate(key);
         vm.revertTo(snapshot);
         test_donate(emptyHook);
     }
+
     function test_donate(PoolKey memory keys) internal {
         if (
             !Hooks.hasPermission(key.hooks, Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG) &&
@@ -211,7 +216,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
 
     }
 
-    function test_swap_compare() public{
+    function test_swap_compare() public {
+        vm.startPrank(txOrigin);
         console.log(gasleft());
         uint256 snapshot = vm.snapshot();      
         test_swap(key);
