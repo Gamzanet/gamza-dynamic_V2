@@ -335,19 +335,24 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         (uint160 sqrtPrice,int24 tick,uint24 protocolFee,uint24 lpFee ) = manager.getSlot0(keys.toId());
         if(address(keys.hooks) == address(0x0)){
-            
+            console.log("no-hook-Swap-tokenPrice-using : ", sqrtPrice);
             console.log("no-hook-Swap-protocolFee-using : ", protocolFee);
             console.log("no-hook-Swap-lpFee-using : ", lpFee);
             console.log("no-hook-Swap-balance-amount0-using : ",balance.amount0());
             console.log("no-hook-Swap-balance-amount1-using : ",balance.amount1());
-            console.log("no-hook-swap-gas-using : ", (start - end) * tx.gasprice );
+            console.log("no-hook-swap-gas-using : ", (start - end) );
+            console.log("no-hook-swap-gasPrice-using : ", tx.gasprice );
+            console.log("no-hook-swap-totalGas-using : ", (start - end) * tx.gasprice );
         }
         else{
+            console.log("hook-Swap-tokenPrice-using : ", sqrtPrice);
             console.log("hook-Swap-protocolFee-using : ", protocolFee);
             console.log("hook-Swap-lpFee-using : ", lpFee);
             console.log("hook-Swap-balance-amount0-using : ",balance.amount0());
             console.log("hook-Swap-balance-amount1-using : ",balance.amount1());
-            console.log("hook-swap-gas-using : ", (start - end) * tx.gasprice );
+            console.log("hook-swap-gas-using : ", (start - end) );
+            console.log("hook-swap-gasPrice-using : ", tx.gasprice );
+            console.log("hook-swap-totalGas-using : ", (start - end) * tx.gasprice );
         }
     }
 
