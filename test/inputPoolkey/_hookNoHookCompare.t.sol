@@ -122,13 +122,18 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         custom_ApproveCurrency(inputkey.currency1);
 
         // check initialized
-        (uint160 sqrtPriceX96,,,uint24 lpfee) = manager.getSlot0(inputkey.toId());
+        (uint160 sqrtPriceX96,,uint24 pf,uint24 lpfee) = manager.getSlot0(inputkey.toId());
         if (sqrtPriceX96 == 0) {
             initPool(inputkey.currency0, inputkey.currency1, inputkey.hooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             sqrtPriceX96 = SQRT_PRICE_1_1;
         }
-        (,,,lpfee) = manager.getSlot0(inputkey.toId());
+        //(,,,lpfee) = manager.getSlot0(inputkey.toId());
+        
         key = inputkey;
+        console.log("init");
+        console.log(lpfee);
+        console.log(pf);
+        console.log("init");
         (emptyHook,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(address(0)), lpfee, inputkey.tickSpacing, sqrtPriceX96, ZERO_BYTES);
         console.log("setup end:",gasleft());
     }
