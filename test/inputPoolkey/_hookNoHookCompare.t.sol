@@ -122,14 +122,14 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         custom_ApproveCurrency(inputkey.currency1);
 
         // check initialized
-        (uint160 sqrtPriceX96,,,) = manager.getSlot0(inputkey.toId());
+        (uint160 sqrtPriceX96,,,uint24 lpfee) = manager.getSlot0(inputkey.toId());
         if (sqrtPriceX96 == 0) {
             initPool(inputkey.currency0, inputkey.currency1, inputkey.hooks, inputkey.fee, inputkey.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
             sqrtPriceX96 = SQRT_PRICE_1_1;
         }
-
+        (,,,lpfee) = manager.getSlot0(inputkey.toId());
         key = inputkey;
-        (emptyHook,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(address(0)), inputkey.fee, inputkey.tickSpacing, sqrtPriceX96, ZERO_BYTES);
+        (emptyHook,) = initPool(inputkey.currency0, inputkey.currency1, IHooks(address(0)), lpfee, inputkey.tickSpacing, sqrtPriceX96, ZERO_BYTES);
         console.log("setup end:",gasleft());
     }
 
@@ -359,7 +359,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     function custom_deployFreshManagerAndRouters() internal {
         // unichain-sepolia
         // manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
-        manager = new PoolManager();
+        manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
 
         swapRouter = new PoolSwapTest(manager);
         swapRouterNoChecks = new SwapRouterNoChecks(manager);
@@ -371,10 +371,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         nestedActionRouter = new PoolNestedActionsTest(manager);
         feeController = new ProtocolFeeControllerTest();
         actionsRouter = new ActionsRouter(manager);
-
-        manager.setProtocolFeeController(feeController);
-
-        quoter = new Quoter(IPoolManager(manager));
     }
 
     function custom_ApproveCurrency(Currency currency) internal {
