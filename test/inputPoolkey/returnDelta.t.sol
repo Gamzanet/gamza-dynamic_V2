@@ -44,6 +44,7 @@ import {PoolClaimsTest} from "v4-core/src/test/PoolClaimsTest.sol";
 import {Action, PoolNestedActionsTest} from "v4-core/src/test/PoolNestedActionsTest.sol";
 import {ProtocolFeeControllerTest} from "v4-core/src/test/ProtocolFeeControllerTest.sol";
 import {Actions, ActionsRouter} from "v4-core/src/test/ActionsRouter.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
     using Hooks for IHooks;
@@ -54,7 +55,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
 
     function setUp() public {
         setupPoolkey();
-        vm.startPrank(txOrigin);
+        vm.startPrank(txOrigin, txOrigin);
         if (currency0.isAddressZero())
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
@@ -62,7 +63,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
     }
 
     function test_addLiquidity_return_delta() public {
-        vm.startPrank(txOrigin);
+        vm.startPrank(txOrigin, txOrigin);
         IPoolManager.ModifyLiquidityParams memory params = 
             custom_seedMoreLiquidity(key, 1 ether, 1 ether);
 
@@ -79,7 +80,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
     }
 
     function test_removeLiquidity_return_delta() public {
-        vm.startPrank(txOrigin);
+        vm.startPrank(txOrigin, txOrigin);
         IPoolManager.ModifyLiquidityParams memory params = 
             custom_seedMoreLiquidity(key, 1 ether, 1 ether);
         if (currency0.isAddressZero())
@@ -98,7 +99,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
     }
 
     function test_addLiquidity6909_return_delta() public {
-        vm.startPrank(txOrigin);
+        vm.startPrank(txOrigin, txOrigin);
         IPoolManager.ModifyLiquidityParams memory params = 
             custom_seedMoreLiquidity(key, 1 ether, 1 ether);
 
@@ -122,7 +123,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
     }
 
     function test_removeLiquidity6909_return_delta() public {
-        vm.startPrank(txOrigin);
+        vm.startPrank(txOrigin, txOrigin);
         IPoolManager.ModifyLiquidityParams memory params = 
             custom_seedMoreLiquidity(key, 1 ether, 1 ether);
         if (currency0.isAddressZero())
@@ -140,42 +141,106 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
         log_balance("removeLiquidity");
     }
 
-    function test_swap_return_delta() public {
-        vm.startPrank(txOrigin);
+    function test_swap_exactOut_return_delta() public {
+        vm.startPrank(txOrigin, txOrigin);
+        PoolSwapTest.TestSettings memory testSettings =
+            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
+        SWAP_PARAMS.amountSpecified = 100-1;
+        snap_balance();
+        {
+            BalanceDelta delta;
+            _getExpectedSwapPrice("SWAP-exactOut");
+            if (currency0.isAddressZero())
+                delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            else
+                delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            log_delta(delta, "SWAP-exactOut");
+        }
+        log_balance("SWAP-exactOut");
+    }
+
+    function test_swap_exactOut_Mint6909_return_delta() public {
+        vm.startPrank(txOrigin, txOrigin);
+        PoolSwapTest.TestSettings memory testSettings =
+            PoolSwapTest.TestSettings({takeClaims: true, settleUsingBurn: false});
+        SWAP_PARAMS.amountSpecified = 100-1;
+        snap_balance();
+        {
+            BalanceDelta delta;
+            _getExpectedSwapPrice("SWAP-exactOut Mint 6909");
+            if (currency0.isAddressZero())
+                delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            else
+                delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            log_delta(delta, "SWAP-exactOut Mint 6909");
+        }
+        log_balance("SWAP-exactOut Mint 6909");
+    }
+
+    function test_swap_exactOut_Burn6909_return_delta() public {
+        vm.startPrank(txOrigin, txOrigin);   
+        if (currency0.isAddressZero())
+            claimsRouter.deposit{value: 10 ether}(currency0, txOrigin, 10 ether);
+        else
+            claimsRouter.deposit(currency0, txOrigin, 10 ether);
+        claimsRouter.deposit(currency1, txOrigin, 10 ether);
+        manager.setOperator(address(swapRouter), true);
+        
+        PoolSwapTest.TestSettings memory testSettings =
+            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: true});
+        SWAP_PARAMS.amountSpecified = 100-1;
+        snap_balance();
+        {
+            BalanceDelta delta;
+            _getExpectedSwapPrice("SWAP-exactOut Burn 6909");
+            if (currency0.isAddressZero())
+                delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            else
+                delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            log_delta(delta, "SWAP-exactOut Burn 6909");
+        }
+        log_balance("SWAP-exactOut Burn 6909");
+    }
+
+    function test_swap_exactIn_return_delta() public {
+        vm.startPrank(txOrigin, txOrigin);
         PoolSwapTest.TestSettings memory testSettings =
             PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
             
         snap_balance();
         {
             BalanceDelta delta;
-            if (currency0.isAddressZero())
+            _getExpectedSwapPrice("SWAP-exactIn");
+            if (currency0.isAddressZero()) {
                 delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            }
             else
                 delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-            log_delta(delta, "SWAP");
+            log_delta(delta, "SWAP-exactIn");
         }
-        log_balance("SWAP");
+        log_balance("SWAP-exactIn");
     }
 
-    function test_swap_Mint6909_return_delta() public {
-        vm.startPrank(txOrigin);
+    function test_swap_exactIn_Mint6909_return_delta() public {
+        vm.startPrank(txOrigin, txOrigin);
         PoolSwapTest.TestSettings memory testSettings =
             PoolSwapTest.TestSettings({takeClaims: true, settleUsingBurn: false});
             
         snap_balance();
         {
             BalanceDelta delta;
+            _getExpectedSwapPrice("SWAP-exactIn Mint 6909");
             if (currency0.isAddressZero())
                 delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             else
                 delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-            log_delta(delta, "SWAP Mint 6909");
+            log_delta(delta, "SWAP-exactIn Mint 6909");
         }
-        log_balance("SWAP");
+        log_balance("SWAP-exactIn Mint 6909");
     }
 
-    function test_swap_Burn6909_return_delta() public {
-        vm.startPrank(txOrigin);        
+    function test_swap_exactIn_Burn6909_return_delta() public {
+        vm.startPrank(txOrigin, txOrigin);   
         if (currency0.isAddressZero())
             claimsRouter.deposit{value: 10 ether}(currency0, txOrigin, 10 ether);
         else
@@ -188,17 +253,18 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
         snap_balance();
         {
             BalanceDelta delta;
+             _getExpectedSwapPrice("SWAP-exactIn Burn 6909");
             if (currency0.isAddressZero())
                 delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             else
                 delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
-            log_delta(delta, "SWAP Burn 6909");
+            log_delta(delta, "SWAP-exactIn Burn 6909");
         }
-        log_balance("SWAP");
+        log_balance("SWAP-exactIn Burn 6909");
     }
 
     function test_donate_return_delta() public {
-        vm.startPrank(txOrigin);
+        vm.startPrank(txOrigin, txOrigin);
         snap_balance();
         {
             BalanceDelta delta;
@@ -232,7 +298,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
         });
     }
 
-    function log_delta(BalanceDelta delta, string memory str) internal pure {
+    function log_delta(BalanceDelta delta, string memory str) internal {
         uint256 totalLength = 40; // 전체 라인의 길이 (중앙의 문자열 포함)
         uint256 strLength = bytes(str).length + 6;
         uint256 starCount = (totalLength - strLength) / 2; // 좌우 별의 개수
@@ -248,6 +314,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
         console.log(string(abi.encodePacked(leftStars, " ", str, " DELTA", " ", rightStars)));
         console.log(amount0, delta.amount0());
         console.log(amount1, delta.amount1());
+        _getActualSwapPrice(str, delta.amount0(), delta.amount1());
         console.log(_repeat("*", totalLength + 2));
         console.log();
     }
@@ -329,5 +396,34 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
             result = string(abi.encodePacked(result, s));
         }
         return result;
+    }
+    function _getExpectedSwapPrice(string memory s) internal {
+
+        (uint256 _liquidity) = manager.getLiquidity(key.toId());
+        (uint160 _priceCurrent, int24 _tick, uint24 _protocolFee, uint24 _lpFee) = manager.getSlot0(key.toId());
+        string[] memory inputs = new string[](7);
+        inputs[0] = "python3";
+        inputs[1] = "test/inputPoolkey/utils/getSwapPrice.py";
+        inputs[2] = s;
+        inputs[3] = Strings.toString(_priceCurrent);
+        inputs[4] = Strings.toString(_liquidity);
+        inputs[5] = Strings.toString(uint256(SWAP_PARAMS.amountSpecified < 0 ? -SWAP_PARAMS.amountSpecified : SWAP_PARAMS.amountSpecified));
+        inputs[6] = Strings.toString(key.fee);
+
+        bytes memory res = vm.ffi(inputs);
+        console.log(string(res));
+    }
+
+    function _getActualSwapPrice(string memory s, int128 _amount_in, int128 _amount_out) internal {
+
+        string[] memory inputs = new string[](5);
+        inputs[0] = "python3";
+        inputs[1] = "test/inputPoolkey/utils/getSwapPrice.py";
+        inputs[2] = s;
+        inputs[3] = Strings.toString(uint128(_amount_in < 0 ? -_amount_in : _amount_in));
+        inputs[4] = Strings.toString(uint128(_amount_out < 0 ? -_amount_out : _amount_out));
+
+        bytes memory res = vm.ffi(inputs);
+        console.log(string(res));
     }
 }
