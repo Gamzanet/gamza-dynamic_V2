@@ -55,8 +55,10 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
     function setUp() public {
         console.log("setup start :",gasleft());
         setupPoolkey();
-        (uint160 sqrtPriceX96,,,) = manager.getSlot0(key.toId());
-        (emptyHook,) = initPool(key.currency0, key.currency1, IHooks(address(0)), key.fee, key.tickSpacing, sqrtPriceX96, ZERO_BYTES);
+        
+        (uint160 sqrtPriceX96,,uint24 pf,uint24 lpfee) = manager.getSlot0(key.toId());
+        (emptyHook,) = initPool(key.currency0, key.currency1, IHooks(address(0)), lpfee , key.tickSpacing, sqrtPriceX96, ZERO_BYTES);
+        
         console.log("setup end:",gasleft());
     }
 
@@ -102,10 +104,14 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
             
         }
         if( address(keys.hooks) == address(0x0) ){
-            console.log("no-hook-add-gas-using : ", (start - end) * tx.gasprice );
+            console.log("no-hook-add-gas-using : ", (start - end)); 
+            console.log("no-hook-add-gasPrice-using : ", tx.gasprice ); 
+            console.log("no-hook-add-totalGas-using : ", (start - end) * tx.gasprice ); 
         }
         else{
-            console.log("hook-add-gas-using : ", (start - end) * tx.gasprice );
+            console.log("hook-add-gas-using : ", (start - end)); 
+            console.log("hook-add-gasPrice-using : ", tx.gasprice ); 
+            console.log("hook-add-totalGas-using : ", (start - end) * tx.gasprice ); 
         }
         
 
@@ -156,10 +162,14 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
 
         }
         if( address(keys.hooks) == address(0x0) ){
-            console.log("no-hook-remove-gas-using : ", (start - end) * tx.gasprice);
+            console.log("no-hook-remove-gas-using : ", (start - end));
+            console.log("no-hook-remove-gasPrice-using : ",tx.gasprice);
+            console.log("no-hook-remove-totalGas-using : ", (start - end) * tx.gasprice);
         }
         else{
-            console.log("hook-remove-gas-using : ", (start - end) * tx.gasprice);
+            console.log("hook-remove-gas-using : ", (start - end));
+            console.log("hook-remove-gasPrice-using : ",tx.gasprice);
+            console.log("hook-remove-totalGas-using : ", (start - end) * tx.gasprice);
         }
         
     }
@@ -208,10 +218,14 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
         }
 
         if( address(keys.hooks) == address(0x0) ){
-            console.log("no-hook-donate-gas-using : ", (start - end) * tx.gasprice );
+            console.log("no-hook-donate-gas-using : ", (start - end) );
+            console.log("no-hook-donate-gasPrice-using : ", tx.gasprice );
+            console.log("no-hook-donate-totalGas-using : ", (start - end) * tx.gasprice );
         }
         else{
-            console.log("hook-doante-gas-using : ",(start - end) * tx.gasprice );
+            console.log("hook-donate-gas-using : ", (start - end) );
+            console.log("hook-donate-gasPrice-using : ", tx.gasprice );
+            console.log("hook-donate-totalGas-using : ", (start - end) * tx.gasprice );
         }
 
     }
