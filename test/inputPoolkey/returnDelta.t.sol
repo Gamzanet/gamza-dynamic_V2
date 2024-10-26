@@ -45,7 +45,7 @@ import {Action, PoolNestedActionsTest} from "v4-core/src/test/PoolNestedActionsT
 import {ProtocolFeeControllerTest} from "v4-core/src/test/ProtocolFeeControllerTest.sol";
 import {Actions, ActionsRouter} from "v4-core/src/test/ActionsRouter.sol";
 
-contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
+contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
     using Hooks for IHooks;
     using LPFeeLibrary for uint24;
     using SafeCast for *;
@@ -97,6 +97,49 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
         log_balance("removeLiquidity");
     }
 
+    function test_addLiquidity6909_return_delta() public {
+        vm.startPrank(txOrigin);
+        IPoolManager.ModifyLiquidityParams memory params = 
+            custom_seedMoreLiquidity(key, 1 ether, 1 ether);
+
+        if (currency0.isAddressZero())
+            claimsRouter.deposit{value: 10 ether}(currency0, txOrigin, 10 ether);
+        else
+            claimsRouter.deposit(currency0, txOrigin, 10 ether);
+        claimsRouter.deposit(currency1, txOrigin, 10 ether);
+        manager.setOperator(address(modifyLiquidityRouter), true);
+
+        snap_balance();
+        {
+            BalanceDelta delta;
+            if (currency0.isAddressZero())
+                delta = modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES, true, false);
+            else
+                delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, true, false);
+            log_delta(delta, "addLiquidity6909");
+        }
+        log_balance("addLiquidity");
+    }
+
+    function test_removeLiquidity6909_return_delta() public {
+        vm.startPrank(txOrigin);
+        IPoolManager.ModifyLiquidityParams memory params = 
+            custom_seedMoreLiquidity(key, 1 ether, 1 ether);
+        if (currency0.isAddressZero())
+            modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES, false, false);
+        else
+            modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, false);
+            
+        snap_balance();
+        {
+            params.liquidityDelta = -params.liquidityDelta;
+            BalanceDelta delta;
+            delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, true);
+            log_delta(delta, "removeLiquidity6909");
+        }
+        log_balance("removeLiquidity");
+    }
+
     function test_swap_return_delta() public {
         vm.startPrank(txOrigin);
         PoolSwapTest.TestSettings memory testSettings =
@@ -110,6 +153,46 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
             else
                 delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             log_delta(delta, "SWAP");
+        }
+        log_balance("SWAP");
+    }
+
+    function test_swap_Mint6909_return_delta() public {
+        vm.startPrank(txOrigin);
+        PoolSwapTest.TestSettings memory testSettings =
+            PoolSwapTest.TestSettings({takeClaims: true, settleUsingBurn: false});
+            
+        snap_balance();
+        {
+            BalanceDelta delta;
+            if (currency0.isAddressZero())
+                delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            else
+                delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            log_delta(delta, "SWAP Mint 6909");
+        }
+        log_balance("SWAP");
+    }
+
+    function test_swap_Burn6909_return_delta() public {
+        vm.startPrank(txOrigin);        
+        if (currency0.isAddressZero())
+            claimsRouter.deposit{value: 10 ether}(currency0, txOrigin, 10 ether);
+        else
+            claimsRouter.deposit(currency0, txOrigin, 10 ether);
+        claimsRouter.deposit(currency1, txOrigin, 10 ether);
+        manager.setOperator(address(swapRouter), true);
+        
+        PoolSwapTest.TestSettings memory testSettings =
+            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: true});
+        snap_balance();
+        {
+            BalanceDelta delta;
+            if (currency0.isAddressZero())
+                delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            else
+                delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            log_delta(delta, "SWAP Burn 6909");
         }
         log_balance("SWAP");
     }
@@ -178,6 +261,12 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
 
         uint256 userBalance0;
         uint256 userBalance1;
+
+        uint256 hook6909Balance0;
+        uint256 hook6909Balance1;
+        
+        uint256 user6909Balance0;
+        uint256 user6909Balance1;
     }
     UsersBalance userBalance;
     function snap_balance() internal {
@@ -189,6 +278,12 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
 
         userBalance.userBalance0 = currency0.balanceOf(address(txOrigin));
         userBalance.userBalance1 = currency1.balanceOf(address(txOrigin));
+
+        userBalance.hook6909Balance0 = manager.balanceOf(address(key.hooks), currency0.toId());
+        userBalance.hook6909Balance1 = manager.balanceOf(address(key.hooks), currency1.toId());
+
+        userBalance.user6909Balance0 = manager.balanceOf(address(txOrigin), currency0.toId());
+        userBalance.user6909Balance1 = manager.balanceOf(address(txOrigin), currency1.toId());
     }
 
     function log_balance(string memory str) internal view {
@@ -206,6 +301,10 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
         string memory hookAmount1 = string(abi.encodePacked(str,"-hookAmount1 delta:"));
         string memory userAmount0 = string(abi.encodePacked(str,"-userAmount0 delta:"));
         string memory userAmount1 = string(abi.encodePacked(str,"-userAmount1 delta:"));
+        string memory hook6909Amount0 = string(abi.encodePacked(str,"-hook6909Amount0 delta:"));
+        string memory hook6909Amount1 = string(abi.encodePacked(str,"-hook6909Amount1 delta:"));
+        string memory user6909Amount0 = string(abi.encodePacked(str,"-user6909Amount0 delta:"));
+        string memory user6909Amount1 = string(abi.encodePacked(str,"-user6909Amount1 delta:"));
 
         console.log();
         console.log(string(abi.encodePacked(leftStars, " ", str, " Balance DELTA", " ", rightStars)));
@@ -215,6 +314,10 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
         console.log(hookAmount1, - int(userBalance.hookBalance1) + int(currency1.balanceOf(address(key.hooks))));
         console.log(userAmount0, - int(userBalance.userBalance0) + int(currency0.balanceOf(address(txOrigin))));
         console.log(userAmount1, - int(userBalance.userBalance1) + int(currency1.balanceOf(address(txOrigin))));
+        console.log(hook6909Amount0, - int(userBalance.hook6909Balance0) + int(manager.balanceOf(address(key.hooks), currency0.toId())));
+        console.log(hook6909Amount1, - int(userBalance.hook6909Balance1) + int(manager.balanceOf(address(key.hooks), currency1.toId())));
+        console.log(user6909Amount0, - int(userBalance.user6909Balance0) + int(manager.balanceOf(address(txOrigin), currency0.toId())));
+        console.log(user6909Amount1, - int(userBalance.user6909Balance1) + int(manager.balanceOf(address(txOrigin), currency1.toId())));
         console.log(_repeat("*", totalLength + 2));
         console.log();
     }
