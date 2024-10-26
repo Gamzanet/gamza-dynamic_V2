@@ -179,10 +179,14 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             
         }
         if( address(keys.hooks) == address(0x0) ){
-            console.log("no-hook-add-gas-using : ", (start - end) * tx.gasprice );
+            console.log("no-hook-add-gas-using : ", (start - end)); 
+            console.log("no-hook-add-gasPrice-using : ", tx.gasprice ); 
+            console.log("no-hook-add-totalGas-using : ", (start - end) * tx.gasprice ); 
         }
         else{
-            console.log("hook-add-gas-using : ", (start - end) * tx.gasprice );
+            console.log("hook-add-gas-using : ", (start - end)); 
+            console.log("hook-add-gasPrice-using : ", tx.gasprice ); 
+            console.log("hook-add-totalGas-using : ", (start - end) * tx.gasprice ); 
         }
         
 
@@ -232,10 +236,14 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         }
         if( address(keys.hooks) == address(0x0) ){
-            console.log("no-hook-remove-gas-using : ", (start - end) * tx.gasprice);
+            console.log("no-hook-remove-gas-using : ", (start - end));
+            console.log("no-hook-remove-gasPrice-using : ",tx.gasprice);
+            console.log("no-hook-remove-totalGas-using : ", (start - end) * tx.gasprice);
         }
         else{
-            console.log("hook-remove-gas-using : ", (start - end) * tx.gasprice);
+            console.log("hook-remove-gas-using : ", (start - end));
+            console.log("hook-remove-gasPrice-using : ",tx.gasprice);
+            console.log("hook-remove-totalGas-using : ", (start - end) * tx.gasprice);
         }
         
     }
@@ -281,10 +289,14 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         }
 
         if( address(keys.hooks) == address(0x0) ){
-            console.log("no-hook-donate-gas-using : ", (start - end) * tx.gasprice );
+            console.log("no-hook-donate-gas-using : ", (start - end) );
+            console.log("no-hook-donate-gasPrice-using : ", tx.gasprice );
+            console.log("no-hook-donate-totalGas-using : ", (start - end) * tx.gasprice );
         }
         else{
-            console.log("hook-doante-gas-using : ",(start - end) * tx.gasprice );
+            console.log("hook-donate-gas-using : ", (start - end) );
+            console.log("hook-donate-gasPrice-using : ", tx.gasprice );
+            console.log("hook-donate-totalGas-using : ", (start - end) * tx.gasprice );
         }
 
     }
