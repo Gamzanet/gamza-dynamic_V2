@@ -5,5 +5,6 @@
     "fee": 0,
     "hooks": "0xB0FbB753924930AF784401Ce716488Dee4a89040",
     "tickSpacing": 32767
-  }
+  },
+  "deployer": "0x4e59b44847b379578588920cA78FbF26c0B4956C"
 }

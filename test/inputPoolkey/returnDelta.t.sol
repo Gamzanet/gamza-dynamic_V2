@@ -31,6 +31,7 @@ import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
 
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 import {LiquidityAmounts} from "v4-core/test/utils/LiquidityAmounts.sol";
+import {setupContract} from "./setupContract.sol";
 
 // Routers
 import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
@@ -44,79 +45,16 @@ import {Action, PoolNestedActionsTest} from "v4-core/src/test/PoolNestedActionsT
 import {ProtocolFeeControllerTest} from "v4-core/src/test/ProtocolFeeControllerTest.sol";
 import {Actions, ActionsRouter} from "v4-core/src/test/ActionsRouter.sol";
 
-contract PoolManagerTest is Test, Deployers, GasSnapshot {
+contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
     using Hooks for IHooks;
     using LPFeeLibrary for uint24;
     using SafeCast for *;
     using ProtocolFeeLibrary for uint24;
     using StateLibrary for IPoolManager;
 
-    event UnlockCallback();
-    event ProtocolFeeControllerUpdated(address feeController);
-    event ModifyLiquidity(
-        PoolId indexed poolId,
-        address indexed sender,
-        int24 tickLower,
-        int24 tickUpper,
-        int256 liquidityDelta,
-        bytes32 salt
-    );
-    event Swap(
-        PoolId indexed poolId,
-        address indexed sender,
-        int128 amount0,
-        int128 amount1,
-        uint160 sqrtPriceX96,
-        uint128 liquidity,
-        int24 tick,
-        uint24 fee
-    );
-
-    event Donate(PoolId indexed id, address indexed sender, uint256 amount0, uint256 amount1);
-
-    event Transfer(
-        address caller, address indexed sender, address indexed receiver, uint256 indexed id, uint256 amount
-    );
-
-    uint24 constant MAX_PROTOCOL_FEE_BOTH_TOKENS = (1000 << 12) | 1000; // 1000 1000
-
-    IPoolManager.ModifyLiquidityParams public CUSTOM_LIQUIDITY_PARAMS;
-    IPoolManager.ModifyLiquidityParams public CUSTOM_REMOVE_LIQUIDITY_PARAMS;
-    IPoolManager.SwapParams public CUSTOM_SWAP_PARAMS;
-
     function setUp() public {
-        string memory directory = vm.envString("_data_location"); // ../../src/data
-        string memory dataPath = vm.envString("_targetPoolKey"); // asdf.json
-        string memory filePath = string.concat(directory, dataPath);
-        string memory code_json = vm.readFile(filePath);
-
-        address _currency0 = vm.parseJsonAddress(code_json, ".data.currency0");
-        address _currency1 = vm.parseJsonAddress(code_json, ".data.currency1");
-        uint24 _fee = uint24(vm.parseJsonUint(code_json, ".data.fee"));
-        int24 _tickSpacing = int24(vm.parseJsonInt(code_json, ".data.tickSpacing"));
-        address _hooks = vm.parseJsonAddress(code_json, ".data.hooks");
-
-        key.currency0 = Currency.wrap(_currency0);
-        key.currency1 = Currency.wrap(_currency1);
-        key.fee = _fee;
-        key.tickSpacing = _tickSpacing;
-        key.hooks = IHooks(_hooks);
-        (currency0, currency1) = (key.currency0, key.currency1);
-
-        CUSTOM_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({tickLower: -(2*_tickSpacing), tickUpper: (2*_tickSpacing), liquidityDelta: 1e18, salt: 0});
-        CUSTOM_REMOVE_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({tickLower: -(2*_tickSpacing), tickUpper: (2*_tickSpacing), liquidityDelta: -1e18, salt: 0});
-
-        custom_deployFreshManagerAndRouters();
-        if (!currency0.isAddressZero()) custom_ApproveCurrency(key.currency0, 10_000 ether);
-        custom_ApproveCurrency(key.currency1, 10_000 ether);
-
-        // check initialized
-        (uint160 sqrtPriceX96,,,) = manager.getSlot0(key.toId());
-        if (sqrtPriceX96 == 0) {
-            initPool(key.currency0, key.currency1, key.hooks, key.fee, key.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
-            sqrtPriceX96 = SQRT_PRICE_1_1;
-        }
-
+        setupPoolkey();
+        vm.startPrank(txOrigin);
         if (currency0.isAddressZero())
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
@@ -124,6 +62,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     }
 
     function test_addLiquidity_return_delta() public {
+        vm.startPrank(txOrigin);
         IPoolManager.ModifyLiquidityParams memory params = 
             custom_seedMoreLiquidity(key, 1 ether, 1 ether);
 
@@ -140,6 +79,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
     }
 
     function test_removeLiquidity_return_delta() public {
+        vm.startPrank(txOrigin);
         IPoolManager.ModifyLiquidityParams memory params = 
             custom_seedMoreLiquidity(key, 1 ether, 1 ether);
         if (currency0.isAddressZero())
@@ -157,7 +97,51 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         log_balance("removeLiquidity");
     }
 
+    function test_addLiquidity6909_return_delta() public {
+        vm.startPrank(txOrigin);
+        IPoolManager.ModifyLiquidityParams memory params = 
+            custom_seedMoreLiquidity(key, 1 ether, 1 ether);
+
+        if (currency0.isAddressZero())
+            claimsRouter.deposit{value: 10 ether}(currency0, txOrigin, 10 ether);
+        else
+            claimsRouter.deposit(currency0, txOrigin, 10 ether);
+        claimsRouter.deposit(currency1, txOrigin, 10 ether);
+        manager.setOperator(address(modifyLiquidityRouter), true);
+
+        snap_balance();
+        {
+            BalanceDelta delta;
+            if (currency0.isAddressZero())
+                delta = modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES, true, false);
+            else
+                delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, true, false);
+            log_delta(delta, "addLiquidity6909");
+        }
+        log_balance("addLiquidity");
+    }
+
+    function test_removeLiquidity6909_return_delta() public {
+        vm.startPrank(txOrigin);
+        IPoolManager.ModifyLiquidityParams memory params = 
+            custom_seedMoreLiquidity(key, 1 ether, 1 ether);
+        if (currency0.isAddressZero())
+            modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, params, ZERO_BYTES, false, false);
+        else
+            modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, false);
+            
+        snap_balance();
+        {
+            params.liquidityDelta = -params.liquidityDelta;
+            BalanceDelta delta;
+            delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, true);
+            log_delta(delta, "removeLiquidity6909");
+        }
+        log_balance("removeLiquidity");
+    }
+
     function test_swap_return_delta() public {
+        vm.startPrank(txOrigin);
         PoolSwapTest.TestSettings memory testSettings =
             PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
             
@@ -173,7 +157,48 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         log_balance("SWAP");
     }
 
+    function test_swap_Mint6909_return_delta() public {
+        vm.startPrank(txOrigin);
+        PoolSwapTest.TestSettings memory testSettings =
+            PoolSwapTest.TestSettings({takeClaims: true, settleUsingBurn: false});
+            
+        snap_balance();
+        {
+            BalanceDelta delta;
+            if (currency0.isAddressZero())
+                delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            else
+                delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            log_delta(delta, "SWAP Mint 6909");
+        }
+        log_balance("SWAP");
+    }
+
+    function test_swap_Burn6909_return_delta() public {
+        vm.startPrank(txOrigin);        
+        if (currency0.isAddressZero())
+            claimsRouter.deposit{value: 10 ether}(currency0, txOrigin, 10 ether);
+        else
+            claimsRouter.deposit(currency0, txOrigin, 10 ether);
+        claimsRouter.deposit(currency1, txOrigin, 10 ether);
+        manager.setOperator(address(swapRouter), true);
+        
+        PoolSwapTest.TestSettings memory testSettings =
+            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: true});
+        snap_balance();
+        {
+            BalanceDelta delta;
+            if (currency0.isAddressZero())
+                delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            else
+                delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+            log_delta(delta, "SWAP Burn 6909");
+        }
+        log_balance("SWAP");
+    }
+
     function test_donate_return_delta() public {
+        vm.startPrank(txOrigin);
         snap_balance();
         {
             BalanceDelta delta;
@@ -184,46 +209,6 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             log_delta(delta, "Donate");
         }
         log_balance("Donate");
-    }
-
-    function custom_deployFreshManagerAndRouters() internal {
-        // unichain-sepolia
-        manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
-
-        swapRouter = new PoolSwapTest(manager);
-        swapRouterNoChecks = new SwapRouterNoChecks(manager);
-        modifyLiquidityRouter = new PoolModifyLiquidityTest(manager);
-        modifyLiquidityNoChecks = new PoolModifyLiquidityTestNoChecks(manager);
-        donateRouter = new PoolDonateTest(manager);
-        takeRouter = new PoolTakeTest(manager);
-        claimsRouter = new PoolClaimsTest(manager);
-        nestedActionRouter = new PoolNestedActionsTest(manager);
-        feeController = new ProtocolFeeControllerTest();
-        actionsRouter = new ActionsRouter(manager);
-
-        vm.prank(0x762a34656662F1ecbC033D8c6b34B77E4eA435B7); // manager owner
-        manager.setProtocolFeeController(feeController);
-    }
-
-    function custom_ApproveCurrency(Currency currency, uint256 amount) internal {
-        MockERC20 token = MockERC20(Currency.unwrap(currency));
-        
-        deal(address(token), address(this), amount);
-        address[9] memory toApprove = [
-            address(swapRouter),
-            address(swapRouterNoChecks),
-            address(modifyLiquidityRouter),
-            address(modifyLiquidityNoChecks),
-            address(donateRouter),
-            address(takeRouter),
-            address(claimsRouter),
-            address(nestedActionRouter.executor()),
-            address(actionsRouter)
-        ];
-
-        for (uint256 i = 0; i < toApprove.length; i++) {
-            token.approve(toApprove[i], amount);
-        }
     }
 
     function custom_seedMoreLiquidity(PoolKey memory _key, uint256 amount0, uint256 amount1) 
@@ -247,7 +232,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         });
     }
 
-    function log_delta(BalanceDelta delta, string memory str) internal view {
+    function log_delta(BalanceDelta delta, string memory str) internal pure {
         uint256 totalLength = 40; // 전체 라인의 길이 (중앙의 문자열 포함)
         uint256 strLength = bytes(str).length + 6;
         uint256 starCount = (totalLength - strLength) / 2; // 좌우 별의 개수
@@ -276,6 +261,12 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
 
         uint256 userBalance0;
         uint256 userBalance1;
+
+        uint256 hook6909Balance0;
+        uint256 hook6909Balance1;
+        
+        uint256 user6909Balance0;
+        uint256 user6909Balance1;
     }
     UsersBalance userBalance;
     function snap_balance() internal {
@@ -285,8 +276,14 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         userBalance.hookBalance0 = currency0.balanceOf(address(key.hooks));
         userBalance.hookBalance1 = currency1.balanceOf(address(key.hooks));
 
-        userBalance.userBalance0 = currency0.balanceOf(address(this));
-        userBalance.userBalance1 = currency1.balanceOf(address(this));
+        userBalance.userBalance0 = currency0.balanceOf(address(txOrigin));
+        userBalance.userBalance1 = currency1.balanceOf(address(txOrigin));
+
+        userBalance.hook6909Balance0 = manager.balanceOf(address(key.hooks), currency0.toId());
+        userBalance.hook6909Balance1 = manager.balanceOf(address(key.hooks), currency1.toId());
+
+        userBalance.user6909Balance0 = manager.balanceOf(address(txOrigin), currency0.toId());
+        userBalance.user6909Balance1 = manager.balanceOf(address(txOrigin), currency1.toId());
     }
 
     function log_balance(string memory str) internal view {
@@ -304,6 +301,10 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         string memory hookAmount1 = string(abi.encodePacked(str,"-hookAmount1 delta:"));
         string memory userAmount0 = string(abi.encodePacked(str,"-userAmount0 delta:"));
         string memory userAmount1 = string(abi.encodePacked(str,"-userAmount1 delta:"));
+        string memory hook6909Amount0 = string(abi.encodePacked(str,"-hook6909Amount0 delta:"));
+        string memory hook6909Amount1 = string(abi.encodePacked(str,"-hook6909Amount1 delta:"));
+        string memory user6909Amount0 = string(abi.encodePacked(str,"-user6909Amount0 delta:"));
+        string memory user6909Amount1 = string(abi.encodePacked(str,"-user6909Amount1 delta:"));
 
         console.log();
         console.log(string(abi.encodePacked(leftStars, " ", str, " Balance DELTA", " ", rightStars)));
@@ -311,8 +312,12 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         console.log(mangerAmount1, - int(userBalance.managerBalance1) + int(currency1.balanceOf(address(manager))));
         console.log(hookAmount0, - int(userBalance.hookBalance0) + int(currency0.balanceOf(address(key.hooks))));
         console.log(hookAmount1, - int(userBalance.hookBalance1) + int(currency1.balanceOf(address(key.hooks))));
-        console.log(userAmount0, - int(userBalance.userBalance0) + int(currency0.balanceOf(address(this))));
-        console.log(userAmount1, - int(userBalance.userBalance1) + int(currency1.balanceOf(address(this))));
+        console.log(userAmount0, - int(userBalance.userBalance0) + int(currency0.balanceOf(address(txOrigin))));
+        console.log(userAmount1, - int(userBalance.userBalance1) + int(currency1.balanceOf(address(txOrigin))));
+        console.log(hook6909Amount0, - int(userBalance.hook6909Balance0) + int(manager.balanceOf(address(key.hooks), currency0.toId())));
+        console.log(hook6909Amount1, - int(userBalance.hook6909Balance1) + int(manager.balanceOf(address(key.hooks), currency1.toId())));
+        console.log(user6909Amount0, - int(userBalance.user6909Balance0) + int(manager.balanceOf(address(txOrigin), currency0.toId())));
+        console.log(user6909Amount1, - int(userBalance.user6909Balance1) + int(manager.balanceOf(address(txOrigin), currency1.toId())));
         console.log(_repeat("*", totalLength + 2));
         console.log();
     }
