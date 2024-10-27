@@ -119,7 +119,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
                 delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, true, false);
             log_delta(delta, "addLiquidity6909");
         }
-        log_balance("addLiquidity");
+        log_balance("addLiquidity6909");
     }
 
     function test_removeLiquidity6909_return_delta() public {
@@ -138,7 +138,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
             delta = modifyLiquidityRouter.modifyLiquidity(key, params, ZERO_BYTES, false, true);
             log_delta(delta, "removeLiquidity6909");
         }
-        log_balance("removeLiquidity");
+        log_balance("removeLiquidity6909");
     }
 
     function test_swap_exactOut_return_delta() public {
