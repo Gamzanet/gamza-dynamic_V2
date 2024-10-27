@@ -149,7 +149,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
         snap_balance();
         {
             BalanceDelta delta;
-            _getExpectedSwapPrice("SWAP-exactOut");
+            _logForExpectedPrice("SWAP-exactOut");
             if (currency0.isAddressZero())
                 delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             else
@@ -167,7 +167,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
         snap_balance();
         {
             BalanceDelta delta;
-            _getExpectedSwapPrice("SWAP-exactOut Mint 6909");
+            _logForExpectedPrice("SWAP-exactOut Mint 6909");
             if (currency0.isAddressZero())
                 delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             else
@@ -192,7 +192,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
         snap_balance();
         {
             BalanceDelta delta;
-            _getExpectedSwapPrice("SWAP-exactOut Burn 6909");
+            _logForExpectedPrice("SWAP-exactOut Burn 6909");
             if (currency0.isAddressZero())
                 delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             else
@@ -210,7 +210,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
         snap_balance();
         {
             BalanceDelta delta;
-            _getExpectedSwapPrice("SWAP-exactIn");
+            _logForExpectedPrice("SWAP-exactIn");
             if (currency0.isAddressZero()) {
                 delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             }
@@ -229,7 +229,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
         snap_balance();
         {
             BalanceDelta delta;
-            _getExpectedSwapPrice("SWAP-exactIn Mint 6909");
+            _logForExpectedPrice("SWAP-exactIn Mint 6909");
             if (currency0.isAddressZero())
                 delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             else
@@ -253,7 +253,7 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
         snap_balance();
         {
             BalanceDelta delta;
-             _getExpectedSwapPrice("SWAP-exactIn Burn 6909");
+             _logForExpectedPrice("SWAP-exactIn Burn 6909");
             if (currency0.isAddressZero())
                 delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             else
@@ -314,7 +314,6 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
         console.log(string(abi.encodePacked(leftStars, " ", str, " DELTA", " ", rightStars)));
         console.log(amount0, delta.amount0());
         console.log(amount1, delta.amount1());
-        _getActualSwapPrice(str, delta.amount0(), delta.amount1());
         console.log(_repeat("*", totalLength + 2));
         console.log();
     }
@@ -397,33 +396,36 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
         }
         return result;
     }
-    function _getExpectedSwapPrice(string memory s) internal {
+    function _logForExpectedPrice(string memory s) internal {
 
         (uint256 _liquidity) = manager.getLiquidity(key.toId());
         (uint160 _priceCurrent, int24 _tick, uint24 _protocolFee, uint24 _lpFee) = manager.getSlot0(key.toId());
-        string[] memory inputs = new string[](7);
-        inputs[0] = "python3";
-        inputs[1] = "test/inputPoolkey/utils/getSwapPrice.py";
-        inputs[2] = s;
-        inputs[3] = Strings.toString(_priceCurrent);
-        inputs[4] = Strings.toString(_liquidity);
-        inputs[5] = Strings.toString(uint256(SWAP_PARAMS.amountSpecified < 0 ? -SWAP_PARAMS.amountSpecified : SWAP_PARAMS.amountSpecified));
-        inputs[6] = Strings.toString(key.fee);
+        // string[] memory inputs = new string[](7);
+        // inputs[0] = "python3";
+        // inputs[1] = "test/inputPoolkey/utils/getSwapPrice.py";
+        // inputs[2] = Strings.toString(_priceCurrent);
+        // inputs[3] = Strings.toString(_liquidity);
+        // inputs[4] = Strings.toString(uint256(SWAP_PARAMS.amountSpecified < 0 ? -SWAP_PARAMS.amountSpecified : SWAP_PARAMS.amountSpecified));
+        // inputs[5] = Strings.toString(key.fee);
 
-        bytes memory res = vm.ffi(inputs);
-        console.log(string(res));
+        // bytes memory res = vm.ffi(inputs);
+        // console.log(string(res));
+        console.log(string.concat(s, "-for-expected-current-price: "), _priceCurrent);
+        console.log(string.concat(s, "-for-expected-current-liquidity: "), _liquidity);
+        console.log(string.concat(s, "-for-expected-amount0-specified: "), SWAP_PARAMS.amountSpecified < 0 ? -SWAP_PARAMS.amountSpecified : SWAP_PARAMS.amountSpecified);
+        console.log(string.concat(s, "-for-expected-current-fee: "), key.fee);
     }
 
-    function _getActualSwapPrice(string memory s, int128 _amount_in, int128 _amount_out) internal {
+    function _logForActualSwapPrice(string memory s, int128 _amount_in, int128 _amount_out) internal {
 
-        string[] memory inputs = new string[](5);
-        inputs[0] = "python3";
-        inputs[1] = "test/inputPoolkey/utils/getSwapPrice.py";
-        inputs[2] = s;
-        inputs[3] = Strings.toString(uint128(_amount_in < 0 ? -_amount_in : _amount_in));
-        inputs[4] = Strings.toString(uint128(_amount_out < 0 ? -_amount_out : _amount_out));
+        // string[] memory inputs = new string[](5);
+        // inputs[0] = "python3";
+        // inputs[1] = "test/inputPoolkey/utils/getSwapPrice.py";
+        // inputs[2] = Strings.toString(uint128(_amount_in < 0 ? -_amount_in : _amount_in));    #amount0 delta:
+        // inputs[3] = Strings.toString(uint128(_amount_out < 0 ? -_amount_out : _amount_out)); #amount1 delta:
 
-        bytes memory res = vm.ffi(inputs);
-        console.log(string(res));
+        // bytes memory res = vm.ffi(inputs);
+        // console.log(string(res));
+        
     }
 }
