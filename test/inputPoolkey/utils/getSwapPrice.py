@@ -52,15 +52,15 @@ def calc_amount1(liq, pa, pb):
 
 
 
-def calc_expected():
+def calc_expected(price_current, liquidity,specified,fee):
     # console.log(string.concat(s, "-for-expected-current-price: "), _priceCurrent);
     # console.log(string.concat(s, "-for-expected-current-liquidity: "), _liquidity);
     # console.log(string.concat(s, "-for-expected-amount0-specified: "), SWAP_PARAMS.amountSpecified < 0 ? -SWAP_PARAMS.amountSpecified : SWAP_PARAMS.amountSpecified);
     # console.log(string.concat(s, "-for-expected-current-fee: "), key.fee);
-    sqrtp_cur = int(args[1])
-    liq = int(args[2])
-    amount_in = int(args[3])
-    fee = int(args[4])
+    sqrtp_cur = int(price_current)
+    liq = int(liquidity)
+    amount_in = int(specified)
+    fee = int(fee)
 
     price_next = int((liq * q96 * sqrtp_cur) // (liq * q96 + amount_in * sqrtp_cur))
 
