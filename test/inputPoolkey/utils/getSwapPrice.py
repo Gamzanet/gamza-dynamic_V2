@@ -53,6 +53,10 @@ def calc_amount1(liq, pa, pb):
 
 
 def calc_expected():
+    # console.log(string.concat(s, "-for-expected-current-price: "), _priceCurrent);
+    # console.log(string.concat(s, "-for-expected-current-liquidity: "), _liquidity);
+    # console.log(string.concat(s, "-for-expected-amount0-specified: "), SWAP_PARAMS.amountSpecified < 0 ? -SWAP_PARAMS.amountSpecified : SWAP_PARAMS.amountSpecified);
+    # console.log(string.concat(s, "-for-expected-current-fee: "), key.fee);
     sqrtp_cur = int(args[1])
     liq = int(args[2])
     amount_in = int(args[3])
@@ -70,6 +74,8 @@ def calc_expected():
     return (price_expected, sqrtP_expected, amount_in, amount_out)
 
 def calc_actual():
+    # SWAP-exactOut-amount0 delta: -100
+    # SWAP-exactOut-amount1 delta: 99
     amount_in = int(args[1])
     amount_out = int(args[2])
     # return (f"{s}-SWAP-price actual: {(amount_out / amount_in):.16f}", end="\n  ")
