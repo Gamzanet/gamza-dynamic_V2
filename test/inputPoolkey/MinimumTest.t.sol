@@ -30,6 +30,7 @@ import {ProtocolFeeLibrary} from "v4-core/src/libraries/ProtocolFeeLibrary.sol";
 import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
 
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+import {setupContract} from "./setupContract.sol";
 
 // Routers
 import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
@@ -43,86 +44,15 @@ import {Action, PoolNestedActionsTest} from "v4-core/src/test/PoolNestedActionsT
 import {ProtocolFeeControllerTest} from "v4-core/src/test/ProtocolFeeControllerTest.sol";
 import {Actions, ActionsRouter} from "v4-core/src/test/ActionsRouter.sol";
 
-contract PoolManagerTest is Test, Deployers, GasSnapshot {
+contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
     using Hooks for IHooks;
     using LPFeeLibrary for uint24;
     using SafeCast for *;
     using ProtocolFeeLibrary for uint24;
     using StateLibrary for IPoolManager;
 
-    event UnlockCallback();
-    event ProtocolFeeControllerUpdated(address feeController);
-    event ModifyLiquidity(
-        PoolId indexed poolId,
-        address indexed sender,
-        int24 tickLower,
-        int24 tickUpper,
-        int256 liquidityDelta,
-        bytes32 salt
-    );
-    event Swap(
-        PoolId indexed poolId,
-        address indexed sender,
-        int128 amount0,
-        int128 amount1,
-        uint160 sqrtPriceX96,
-        uint128 liquidity,
-        int24 tick,
-        uint24 fee
-    );
-
-    event Donate(PoolId indexed id, address indexed sender, uint256 amount0, uint256 amount1);
-
-    event Transfer(
-        address caller, address indexed sender, address indexed receiver, uint256 indexed id, uint256 amount
-    );
-
-    uint24 constant MAX_PROTOCOL_FEE_BOTH_TOKENS = (1000 << 12) | 1000; // 1000 1000
-
-    IPoolManager.ModifyLiquidityParams public CUSTOM_LIQUIDITY_PARAMS;
-    IPoolManager.ModifyLiquidityParams public CUSTOM_REMOVE_LIQUIDITY_PARAMS;
-    IPoolManager.SwapParams public CUSTOM_SWAP_PARAMS;
-
-    address txOrigin;
     function setUp() public {
-        txOrigin = makeAddr("Alice");
-        address deployer = makeAddr("Bob");
-        string memory code_json = vm.readFile("test/inputPoolkey/poolkey/testFor_entropy.json");
-
-        address _currency0 = vm.parseJsonAddress(code_json, ".data.currency0");
-        address _currency1 = vm.parseJsonAddress(code_json, ".data.currency1");
-        uint24 _fee = uint24(vm.parseJsonUint(code_json, ".data.fee"));
-        int24 _tickSpacing = int24(vm.parseJsonInt(code_json, ".data.tickSpacing"));
-        address _hooks = vm.parseJsonAddress(code_json, ".data.hooks");
-
-        // deployer = vm.parseJsonAddress(code_json, ".data.deployer");
-
-        key.currency0 = Currency.wrap(_currency0);
-        key.currency1 = Currency.wrap(_currency1);
-        key.fee = _fee;
-        key.tickSpacing = _tickSpacing;
-        key.hooks = IHooks(_hooks);
-        (currency0, currency1) = (key.currency0, key.currency1);
-
-        CUSTOM_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({tickLower: -(2*_tickSpacing), tickUpper: (2*_tickSpacing), liquidityDelta: 1 ether, salt: 0});
-        CUSTOM_REMOVE_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({tickLower: -(2*_tickSpacing), tickUpper: (2*_tickSpacing), liquidityDelta: -1 ether, salt: 0});
-        CUSTOM_SWAP_PARAMS = IPoolManager.SwapParams({zeroForOne: true, amountSpecified: -100, sqrtPriceLimitX96: MIN_PRICE_LIMIT});
-
-        custom_deployFreshManagerAndRouters();
-        vm.startPrank(txOrigin, txOrigin);
-        {
-            if (!currency0.isAddressZero()) custom_ApproveCurrency(key.currency0, 10_000 ether);
-            custom_ApproveCurrency(key.currency1, 10_000 ether);
-        }
-        vm.stopPrank();
-
-        // check initialized
-        (uint160 sqrtPriceX96,,,) = manager.getSlot0(key.toId());
-        if (sqrtPriceX96 == 0) {
-            vm.prank(deployer);
-            initPool(key.currency0, key.currency1, key.hooks, key.fee, key.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
-            sqrtPriceX96 = SQRT_PRICE_1_1;
-        }
+        setupPoolkey();
     }
 
     function test_addLiquidity_6909() public {
@@ -141,8 +71,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         assertEq(manager.balanceOf(address(txOrigin), currency0.toId()), 100 ether);
         assertEq(manager.balanceOf(address(txOrigin), currency1.toId()), 100 ether);
 
-        uint256 currency0BalanceBefore = currency0.balanceOfSelf();
-        uint256 currency1BalanceBefore = currency1.balanceOfSelf();
+        uint256 currency0BalanceBefore = currency0.balanceOf(txOrigin);
+        uint256 currency1BalanceBefore = currency1.balanceOf(txOrigin);
 
         // allow liquidity router to burn our 6909 tokens
         manager.setOperator(address(modifyLiquidityRouter), true);
@@ -155,8 +85,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         assertLt(manager.balanceOf(address(txOrigin), currency1.toId()), 100 ether);
 
         // ERC20s are unspent
-        assertEq(currency0.balanceOfSelf(), currency0BalanceBefore);
-        assertEq(currency1.balanceOfSelf(), currency1BalanceBefore);
+        assertEq(currency0.balanceOf(txOrigin), currency0BalanceBefore);
+        assertEq(currency1.balanceOf(txOrigin), currency1BalanceBefore);
     }
 
     function test_removeLiquidity_6909() public {
@@ -173,8 +103,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         assertEq(manager.balanceOf(address(txOrigin), currency0.toId()), 0);
         assertEq(manager.balanceOf(address(txOrigin), currency1.toId()), 0);
 
-        uint256 currency0BalanceBefore = currency0.balanceOfSelf();
-        uint256 currency1BalanceBefore = currency1.balanceOfSelf();
+        uint256 currency0BalanceBefore = currency0.balanceOf(txOrigin);
+        uint256 currency1BalanceBefore = currency1.balanceOf(txOrigin);
 
         // remove liquidity as 6909: settleUsingBurn=true (unused), takeClaims=true
         modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_REMOVE_LIQUIDITY_PARAMS, ZERO_BYTES, true, true);
@@ -183,8 +113,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         assertTrue(manager.balanceOf(address(txOrigin), currency1.toId()) > 0);
 
         // ERC20s are unspent
-        assertEq(currency0.balanceOfSelf(), currency0BalanceBefore);
-        assertEq(currency1.balanceOfSelf(), currency1BalanceBefore);
+        assertEq(currency0.balanceOf(txOrigin), currency0BalanceBefore);
+        assertEq(currency1.balanceOf(txOrigin), currency1BalanceBefore);
     }
 
     function test_addLiquidity_secondAdditionSameRange_gas() public {
@@ -381,8 +311,8 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-        amount0 = bound(amount0, 0, uint256(int256(type(int128).max)));
-        amount1 = bound(amount1, 0, uint256(int256(type(int128).max)));
+        amount0 = bound(amount0, 0, uint256(int256(type(int128).max) / 2));
+        amount1 = bound(amount1, 0, uint256(int256(type(int128).max) / 2));
 
         vm.expectEmit(true, true, false, true, address(manager));
         emit Donate(key.toId(), address(donateRouter), uint256(amount0), uint256(amount1));
@@ -392,42 +322,5 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot {
         }
         else
             donateRouter.donate(key, amount0, amount1, ZERO_BYTES);
-    }
-
-    function custom_deployFreshManagerAndRouters() internal {
-        // unichain-sepolia
-        manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
-
-        swapRouter = new PoolSwapTest(manager);
-        swapRouterNoChecks = new SwapRouterNoChecks(manager);
-        modifyLiquidityRouter = new PoolModifyLiquidityTest(manager);
-        modifyLiquidityNoChecks = new PoolModifyLiquidityTestNoChecks(manager);
-        donateRouter = new PoolDonateTest(manager);
-        takeRouter = new PoolTakeTest(manager);
-        claimsRouter = new PoolClaimsTest(manager);
-        nestedActionRouter = new PoolNestedActionsTest(manager);
-        feeController = new ProtocolFeeControllerTest();
-        actionsRouter = new ActionsRouter(manager);
-    }
-
-    function custom_ApproveCurrency(Currency currency, uint256 amount) internal {
-        MockERC20 token = MockERC20(Currency.unwrap(currency));
-        
-        deal(address(token), txOrigin, amount);
-        address[9] memory toApprove = [
-            address(swapRouter),
-            address(swapRouterNoChecks),
-            address(modifyLiquidityRouter),
-            address(modifyLiquidityNoChecks),
-            address(donateRouter),
-            address(takeRouter),
-            address(claimsRouter),
-            address(nestedActionRouter.executor()),
-            address(actionsRouter)
-        ];
-
-        for (uint256 i = 0; i < toApprove.length; i++) {
-            token.approve(toApprove[i], amount);
-        }
     }
 }

@@ -4,6 +4,7 @@
         "currency1": "0x6f0cd9ac99c852bdba06f72db93078cba80a32f5",
         "fee": 3000,
         "tickSpacing": 60,
-        "hooks": "0x6e49020Cc72cB9CDB4647dbA3f62Fbb7b4Ae6080"
-    }
+        "hooks": "0xb15ce080C38508a50a46c827c6D596da1e03a080"
+    },
+    "deployer": "0x4e59b44847b379578588920cA78FbF26c0B4956C"
 }

@@ -2,9 +2,9 @@
   "data": {
     "currency0": "0x0197481B0F5237eF312a78528e79667D8b33Dcff",
     "currency1": "0xA56569Bd93dc4b9afCc871e251017dB0543920d4",
-    "fee": 0,
-    "hooks": "0x56BCc46A699Cc7c6d9d67869898A06d731D03a80",
-    "tickSpacing": 32767
+    "fee": 3000,
+    "hooks": "0xEB0E9255aaB63951464f8adF268f676575E92000",
+    "tickSpacing": 60
   },
   "deployer": "0x4e59b44847b379578588920cA78FbF26c0B4956C"
 }

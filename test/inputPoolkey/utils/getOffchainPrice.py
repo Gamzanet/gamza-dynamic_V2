@@ -18,15 +18,18 @@ def get_token_id(token_symbol):
             return data[0]['id']
         else:
             print(f"Token {token_symbol} not found.")
-            exit(1)
+            return -1
+            #exit(1)
     else:
         print(f"Failed to fetch token ID. Status code: {response.status_code}")
-        exit(1)
+        return -1
 
 def get_token_price(response_body):
     # Parse the response body (assuming it's a JSON string)
+    print("response_body :{}".format(response_body))
+    print(response_body)
+
     data = json.loads(response_body)
-    
     # Extract the price and exponent
     price = int(data['parsed'][0]['price']['price'])
     expo = int(data['parsed'][0]['price']['expo'])
@@ -41,7 +44,7 @@ def fetch_token_price(token0_symbol, token1_symbol):
     token0_id = get_token_id(token0_symbol)
     token1_id = get_token_id(token1_symbol)
     if token0_id is None or token1_id is None:
-        return
+        return None
     
     # Send the request to get the price feed
     url0 = f'https://hermes.pyth.network/v2/updates/price/latest?ids%5B%5D={token0_id}'
@@ -52,7 +55,7 @@ def fetch_token_price(token0_symbol, token1_symbol):
 
     if (response0.status_code != 200 or response1.status_code != 200):
         print("Failed to fetch token price.")
-        return
+        return None
 
     # Get the token price in USD
     response0_body = response0.text
@@ -60,8 +63,8 @@ def fetch_token_price(token0_symbol, token1_symbol):
 
     response1_body = response1.text
     token1_price = get_token_price(response1_body)
-
-    print(token1_price / token0_price)
+    #print(token1_price / token0_price)
+    return (token1_price / token0_price)
 
 def get_token_symbol_from_rpc(rpc_url, token_address):
     # Send a request to the RPC URL to get the token symbol from the token address
@@ -89,10 +92,10 @@ def get_token_symbol_from_rpc(rpc_url, token_address):
             return symbol
         else:
             print("Failed to get token symbol from RPC.")
-            exit(1)
+            return -1
     else:
         print(f"Failed to fetch token symbol. Status code: {response.status_code}")
-        exit(1)
+        return -1
 
 if __name__ == '__main__':
     if (len(sys.argv) != 4):

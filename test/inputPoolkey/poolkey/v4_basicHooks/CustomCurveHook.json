@@ -5,5 +5,6 @@
     "fee": 3000,
     "hooks": "0x0cF9505858C1D1Aa6A75626F2ac35288f96D8480",
     "tickSpacing": 60
-  }
+  },
+  "deployer": "0x4e59b44847b379578588920cA78FbF26c0B4956C"
 }
