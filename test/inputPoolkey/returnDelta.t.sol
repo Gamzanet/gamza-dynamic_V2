@@ -361,8 +361,8 @@ contract returnDeltaTest is Test, Deployers, GasSnapshot, setupContract {
         string memory leftStars = _repeat("*", starCount);
         string memory rightStars = _repeat("*", totalLength - starCount - strLength);
 
-        string memory mangerAmount0 = string(abi.encodePacked(str,"-mangerAmount0 delta:"));
-        string memory mangerAmount1 = string(abi.encodePacked(str,"-mangerAmount1 delta:"));
+        string memory mangerAmount0 = string(abi.encodePacked(str,"-managerAmount0 delta:"));
+        string memory mangerAmount1 = string(abi.encodePacked(str,"-managerAmount1 delta:"));
         string memory hookAmount0 = string(abi.encodePacked(str,"-hookAmount0 delta:"));
         string memory hookAmount1 = string(abi.encodePacked(str,"-hookAmount1 delta:"));
         string memory userAmount0 = string(abi.encodePacked(str,"-userAmount0 delta:"));
