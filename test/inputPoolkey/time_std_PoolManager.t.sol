@@ -74,6 +74,146 @@ contract TimeStdTest is Test, Deployers, GasSnapshot, setupContract {
         console.log("warp end");
     }
 
+    function test_initialize_atSpecificTime1Hours(uint256 amount0, uint256 amount1) public {
+        
+        uint256 snapshot = vm.snapshot(); 
+        vm.revertTo(snapshot);
+        uint256 timeToAdd = 1 days / 24;
+        test_addLiquidity_6909_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_removeLiquidity_6909_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_addLiquidity_secondAdditionSameRange_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_removeLiquidity_someLiquidityRemains_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_addLiquidity_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_removeLiquidity_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_succeedsIfInitialized_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_succeeds_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_mint6909IfOutputNotTaken_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_burn6909AsInput_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_againstLiquidity_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_donate_succeedsWhenPoolHasLiquidity_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_donate_OneToken_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_fuzz_donate_emits_event_UsingTime(amount0, amount1, timeToAdd);
+    }
+    function test_initialize_atSpecificTime3Hours(uint256 amount0, uint256 amount1) public {
+        
+        uint256 snapshot = vm.snapshot(); 
+        vm.revertTo(snapshot);
+        uint256 timeToAdd = 1 days / 8;
+        test_addLiquidity_6909_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_removeLiquidity_6909_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_addLiquidity_secondAdditionSameRange_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_removeLiquidity_someLiquidityRemains_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_addLiquidity_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_removeLiquidity_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_succeedsIfInitialized_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_succeeds_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_mint6909IfOutputNotTaken_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_burn6909AsInput_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_againstLiquidity_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_donate_succeedsWhenPoolHasLiquidity_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_donate_OneToken_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_fuzz_donate_emits_event_UsingTime(amount0, amount1, timeToAdd);
+    }
+    function test_initialize_atSpecificTime6Hours(uint256 amount0, uint256 amount1) public {
+        
+        uint256 snapshot = vm.snapshot(); 
+        vm.revertTo(snapshot);
+        uint256 timeToAdd = 1 days / 4;
+        test_addLiquidity_6909_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_removeLiquidity_6909_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_addLiquidity_secondAdditionSameRange_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_removeLiquidity_someLiquidityRemains_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_addLiquidity_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_removeLiquidity_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_succeedsIfInitialized_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_succeeds_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_mint6909IfOutputNotTaken_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_burn6909AsInput_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_againstLiquidity_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_donate_succeedsWhenPoolHasLiquidity_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_donate_OneToken_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_fuzz_donate_emits_event_UsingTime(amount0, amount1, timeToAdd);
+    }
+    function test_initialize_atSpecificTime12Hours(uint256 amount0, uint256 amount1) public {
+        
+        uint256 snapshot = vm.snapshot(); 
+        vm.revertTo(snapshot);
+        uint256 timeToAdd = 1 days / 2;
+        test_addLiquidity_6909_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_removeLiquidity_6909_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_addLiquidity_secondAdditionSameRange_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_removeLiquidity_someLiquidityRemains_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_addLiquidity_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_removeLiquidity_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_succeedsIfInitialized_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_succeeds_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_mint6909IfOutputNotTaken_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_burn6909AsInput_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_swap_againstLiquidity_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_donate_succeedsWhenPoolHasLiquidity_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_donate_OneToken_gas_UsingTime(timeToAdd);
+        vm.revertTo(snapshot);
+        test_fuzz_donate_emits_event_UsingTime(amount0, amount1, timeToAdd);
+    }
     function test_initialize_atSpecificTime1Day(uint256 amount0, uint256 amount1) public {
         
         //vm.snapshot();이 미래에 deprecate 된다고 함. 이후 vm.snapshotState()로 변경해야 함. 현재 버전에선 X
