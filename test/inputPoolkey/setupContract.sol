@@ -83,8 +83,11 @@ contract setupContract is Test, Deployers {
     address txOrigin = makeAddr("Alice");
     address deployer;
     function setupPoolkey() public {
-        string memory code_json = vm.readFile("test/inputPoolkey/poolkey/BaseTest.json");
-
+        string memory directory = vm.envString("_data_location"); // ../../src/data
+        string memory dataPath = vm.envString("_targetPoolKey"); // asdf.json
+        string memory filePath = string.concat(directory, dataPath);
+        string memory code_json = vm.readFile(filePath);
+        
         address _currency0 = vm.parseJsonAddress(code_json, ".data.currency0");
         address _currency1 = vm.parseJsonAddress(code_json, ".data.currency1");
         uint24 _fee = uint24(vm.parseJsonUint(code_json, ".data.fee"));
