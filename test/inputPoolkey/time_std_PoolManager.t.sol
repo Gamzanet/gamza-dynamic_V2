@@ -6,7 +6,6 @@ import {IHooks} from "v4-core/src/interfaces/IHooks.sol";
 import {Hooks} from "v4-core/src/libraries/Hooks.sol";
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {IProtocolFees} from "v4-core/src/interfaces/IProtocolFees.sol";
-import {IProtocolFeeController} from "v4-core/src/interfaces/IProtocolFeeController.sol";
 import {PoolManager} from "v4-core/src/PoolManager.sol";
 import {TickMath} from "v4-core/src/libraries/TickMath.sol";
 import {Pool} from "v4-core/src/libraries/Pool.sol";
@@ -18,7 +17,6 @@ import {EmptyTestHooks} from "v4-core/src/test/EmptyTestHooks.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
 import {BalanceDelta, BalanceDeltaLibrary} from "v4-core/src/types/BalanceDelta.sol";
 import {TestInvalidERC20} from "v4-core/src/test/TestInvalidERC20.sol";
-import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {PoolEmptyUnlockTest} from "v4-core/src/test/PoolEmptyUnlockTest.sol";
 import {PoolId} from "v4-core/src/types/PoolId.sol";
 import {LPFeeLibrary} from "v4-core/src/libraries/LPFeeLibrary.sol";
@@ -41,11 +39,10 @@ import {PoolDonateTest} from "v4-core/src/test/PoolDonateTest.sol";
 import {PoolTakeTest} from "v4-core/src/test/PoolTakeTest.sol";
 import {PoolClaimsTest} from "v4-core/src/test/PoolClaimsTest.sol";
 import {Action, PoolNestedActionsTest} from "v4-core/src/test/PoolNestedActionsTest.sol";
-import {ProtocolFeeControllerTest} from "v4-core/src/test/ProtocolFeeControllerTest.sol";
 import {Actions, ActionsRouter} from "v4-core/src/test/ActionsRouter.sol";
 
 
-contract TimeStdTest is Test, Deployers, GasSnapshot, setupContract {
+contract TimeStdTest is Test, Deployers, setupContract {
     uint256 constant ONE_DAY = 1 days;
     uint256 constant ONE_WEEK = 7 days;
     uint256 constant ONE_MONTH = 30 days;
@@ -823,7 +820,7 @@ contract TimeStdTest is Test, Deployers, GasSnapshot, setupContract {
         else
             donateRouter.donate(key, 100, 200, ZERO_BYTES);
 
-        snapLastCall("donate gas with 2 tokens");
+        // snapLastCall("donate gas with 2 tokens");
 
         (feeGrowthGlobal0X128, feeGrowthGlobal1X128) = manager.getFeeGrowthGlobals(key.toId());
         assertEq(feeGrowthGlobal0X128, 34028236692093846346337);
@@ -839,7 +836,7 @@ contract TimeStdTest is Test, Deployers, GasSnapshot, setupContract {
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         donateRouter.donate(key, 0, 100, ZERO_BYTES);
-        snapLastCall("donate gas with 1 token");
+        // snapLastCall("donate gas with 1 token");
     }
 
     function test_fuzz_donate_emits_event_UsingTime(uint256 amount0, uint256 amount1, uint256 timeToAdd) internal {

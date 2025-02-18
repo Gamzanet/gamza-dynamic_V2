@@ -31,7 +31,7 @@ contract onlyByPoolManagerTest is Test, Deployers, setupContract {
 
     function test_beforeInitialize() public {
         if (key.hooks.hasPermission(Hooks.BEFORE_INITIALIZE_FLAG)) {
-            try key.hooks.beforeInitialize(address(this), key, SQRT_PRICE_1_1, ZERO_BYTES) {
+            try key.hooks.beforeInitialize(address(this), key, SQRT_PRICE_1_1) {
                 revert("Expected NotPoolManager : beforeInitialize must be called only by PoolManager");
             } catch  {}
         }
@@ -39,7 +39,7 @@ contract onlyByPoolManagerTest is Test, Deployers, setupContract {
 
     function test_afterInitialize() public {
         if (key.hooks.hasPermission(Hooks.AFTER_INITIALIZE_FLAG)) {
-            try key.hooks.afterInitialize(address(this), key, SQRT_PRICE_1_1, 0, ZERO_BYTES) {
+            try key.hooks.afterInitialize(address(this), key, SQRT_PRICE_1_1, 0) {
                 revert("Expected NotPoolManager : afterInitialize must be called only by PoolManager");
             } catch  {}
         }

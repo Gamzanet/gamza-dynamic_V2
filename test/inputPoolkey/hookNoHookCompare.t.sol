@@ -6,7 +6,6 @@ import {IHooks} from "v4-core/src/interfaces/IHooks.sol";
 import {Hooks} from "v4-core/src/libraries/Hooks.sol";
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {IProtocolFees} from "v4-core/src/interfaces/IProtocolFees.sol";
-import {IProtocolFeeController} from "v4-core/src/interfaces/IProtocolFeeController.sol";
 import {PoolManager} from "v4-core/src/PoolManager.sol";
 import {TickMath} from "v4-core/src/libraries/TickMath.sol";
 import {Pool} from "v4-core/src/libraries/Pool.sol";
@@ -18,7 +17,6 @@ import {EmptyTestHooks} from "v4-core/src/test/EmptyTestHooks.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
 import {BalanceDelta, BalanceDeltaLibrary} from "v4-core/src/types/BalanceDelta.sol";
 import {TestInvalidERC20} from "v4-core/src/test/TestInvalidERC20.sol";
-import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {PoolEmptyUnlockTest} from "v4-core/src/test/PoolEmptyUnlockTest.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/src/types/PoolId.sol";
 import {LPFeeLibrary} from "v4-core/src/libraries/LPFeeLibrary.sol";
@@ -41,10 +39,9 @@ import {PoolDonateTest} from "v4-core/src/test/PoolDonateTest.sol";
 import {PoolTakeTest} from "v4-core/src/test/PoolTakeTest.sol";
 import {PoolClaimsTest} from "v4-core/src/test/PoolClaimsTest.sol";
 import {Action, PoolNestedActionsTest} from "v4-core/src/test/PoolNestedActionsTest.sol";
-import {ProtocolFeeControllerTest} from "v4-core/src/test/ProtocolFeeControllerTest.sol";
 import {Actions, ActionsRouter} from "v4-core/src/test/ActionsRouter.sol";
 
-contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
+contract PoolManagerTest is Test, Deployers, setupContract {
     using Hooks for IHooks;
     using LPFeeLibrary for uint24;
     using SafeCast for *;
@@ -57,7 +54,7 @@ contract PoolManagerTest is Test, Deployers, GasSnapshot, setupContract {
         setupPoolkey();
         
         (uint160 sqrtPriceX96,,uint24 pf,uint24 lpfee) = manager.getSlot0(key.toId());
-        (emptyHook,) = initPool(key.currency0, key.currency1, IHooks(address(0)), lpfee , key.tickSpacing, sqrtPriceX96, ZERO_BYTES);
+        (emptyHook,) = initPool(key.currency0, key.currency1, IHooks(address(0)), lpfee , key.tickSpacing, sqrtPriceX96);
         
         console.log("setup end:",gasleft());
     }

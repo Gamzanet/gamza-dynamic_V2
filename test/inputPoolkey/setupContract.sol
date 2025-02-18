@@ -6,7 +6,6 @@ import {IHooks} from "v4-core/src/interfaces/IHooks.sol";
 import {Hooks} from "v4-core/src/libraries/Hooks.sol";
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {IProtocolFees} from "v4-core/src/interfaces/IProtocolFees.sol";
-import {IProtocolFeeController} from "v4-core/src/interfaces/IProtocolFeeController.sol";
 import {PoolManager} from "v4-core/src/PoolManager.sol";
 import {TickMath} from "v4-core/src/libraries/TickMath.sol";
 import {Pool} from "v4-core/src/libraries/Pool.sol";
@@ -18,7 +17,6 @@ import {EmptyTestHooks} from "v4-core/src/test/EmptyTestHooks.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
 import {BalanceDelta, BalanceDeltaLibrary} from "v4-core/src/types/BalanceDelta.sol";
 import {TestInvalidERC20} from "v4-core/src/test/TestInvalidERC20.sol";
-import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {PoolEmptyUnlockTest} from "v4-core/src/test/PoolEmptyUnlockTest.sol";
 import {PoolId} from "v4-core/src/types/PoolId.sol";
 import {LPFeeLibrary} from "v4-core/src/libraries/LPFeeLibrary.sol";
@@ -28,6 +26,7 @@ import {SafeCast} from "v4-core/src/libraries/SafeCast.sol";
 import {AmountHelpers} from "v4-core/test/utils/AmountHelpers.sol";
 import {ProtocolFeeLibrary} from "v4-core/src/libraries/ProtocolFeeLibrary.sol";
 import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
+import {TransientStateLibrary} from "v4-core/src/libraries/TransientStateLibrary.sol";
 
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 
@@ -40,15 +39,15 @@ import {PoolDonateTest} from "v4-core/src/test/PoolDonateTest.sol";
 import {PoolTakeTest} from "v4-core/src/test/PoolTakeTest.sol";
 import {PoolClaimsTest} from "v4-core/src/test/PoolClaimsTest.sol";
 import {Action, PoolNestedActionsTest} from "v4-core/src/test/PoolNestedActionsTest.sol";
-import {ProtocolFeeControllerTest} from "v4-core/src/test/ProtocolFeeControllerTest.sol";
 import {Actions, ActionsRouter} from "v4-core/src/test/ActionsRouter.sol";
 
-contract setupContract is Test, Deployers, GasSnapshot {
+contract setupContract is Test, Deployers {
     using Hooks for IHooks;
     using LPFeeLibrary for uint24;
     using SafeCast for *;
     using ProtocolFeeLibrary for uint24;
     using StateLibrary for IPoolManager;
+    using TransientStateLibrary for IPoolManager;
 
     event UnlockCallback();
     event ProtocolFeeControllerUpdated(address feeController);
@@ -84,10 +83,7 @@ contract setupContract is Test, Deployers, GasSnapshot {
     address txOrigin = makeAddr("Alice");
     address deployer;
     function setupPoolkey() public {
-        string memory directory = vm.envString("_data_location"); // ../../src/data
-        string memory dataPath = vm.envString("_targetPoolKey"); // asdf.json
-        string memory filePath = string.concat(directory, dataPath);
-        string memory code_json = vm.readFile(filePath);
+        string memory code_json = vm.readFile("test/inputPoolkey/poolkey/BaseTest.json");
 
         address _currency0 = vm.parseJsonAddress(code_json, ".data.currency0");
         address _currency1 = vm.parseJsonAddress(code_json, ".data.currency1");
@@ -121,14 +117,15 @@ contract setupContract is Test, Deployers, GasSnapshot {
         (uint160 sqrtPriceX96,,,) = manager.getSlot0(key.toId());
         if (sqrtPriceX96 == 0) {
             vm.prank(deployer);
-            initPool(key.currency0, key.currency1, key.hooks, key.fee, key.tickSpacing, SQRT_PRICE_1_1, ZERO_BYTES);
+            initPool(key.currency0, key.currency1, key.hooks, key.fee, key.tickSpacing, SQRT_PRICE_1_1);
             sqrtPriceX96 = SQRT_PRICE_1_1;
         }
     }
 
     function custom_deployFreshManagerAndRouters() internal {
-        // unichain-sepolia
-        manager = IPoolManager(0x38EB8B22Df3Ae7fb21e92881151B365Df14ba967);
+        // manager = IPoolManager(0x00b036b58a818b1bc34d502d3fe730db729e62ac); // Unichain
+        // manager = IPoolManager(0x000000000004444c5dc75cB358380D2e3dE08A90); // Ethereum
+        manager = IPoolManager(0x498581fF718922c3f8e6A244956aF099B2652b2b); // Base
 
         swapRouter = new PoolSwapTest(manager);
         swapRouterNoChecks = new SwapRouterNoChecks(manager);
@@ -138,7 +135,6 @@ contract setupContract is Test, Deployers, GasSnapshot {
         takeRouter = new PoolTakeTest(manager);
         claimsRouter = new PoolClaimsTest(manager);
         nestedActionRouter = new PoolNestedActionsTest(manager);
-        feeController = new ProtocolFeeControllerTest();
         actionsRouter = new ActionsRouter(manager);
     }
 

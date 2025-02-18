@@ -35,6 +35,5 @@ contract upgradableTest is Test, setupContract {
             bool isImplementation = couldBeImplementation.code.length > 0;
             assertFalse(isImplementation, "Hook might be a proxy");
         }
-
     }
 }
