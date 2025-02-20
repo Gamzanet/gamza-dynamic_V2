@@ -70,10 +70,19 @@ contract setupContract is Test, Deployers {
         uint24 fee
     );
 
-    event Donate(PoolId indexed id, address indexed sender, uint256 amount0, uint256 amount1);
+    event Donate(
+        PoolId indexed id,
+        address indexed sender,
+        uint256 amount0,
+        uint256 amount1
+    );
 
     event Transfer(
-        address caller, address indexed sender, address indexed receiver, uint256 indexed id, uint256 amount
+        address caller,
+        address indexed sender,
+        address indexed receiver,
+        uint256 indexed id,
+        uint256 amount
     );
 
     IPoolManager.ModifyLiquidityParams public CUSTOM_LIQUIDITY_PARAMS;
@@ -87,11 +96,13 @@ contract setupContract is Test, Deployers {
         string memory dataPath = vm.envString("_targetPoolKey"); // asdf.json
         string memory filePath = string.concat(directory, dataPath);
         string memory code_json = vm.readFile(filePath);
-        
+
         address _currency0 = vm.parseJsonAddress(code_json, ".data.currency0");
         address _currency1 = vm.parseJsonAddress(code_json, ".data.currency1");
         uint24 _fee = uint24(vm.parseJsonUint(code_json, ".data.fee"));
-        int24 _tickSpacing = int24(vm.parseJsonInt(code_json, ".data.tickSpacing"));
+        int24 _tickSpacing = int24(
+            vm.parseJsonInt(code_json, ".data.tickSpacing")
+        );
         address _hooks = vm.parseJsonAddress(code_json, ".data.hooks");
 
         deployer = vm.parseJsonAddress(code_json, ".deployer");
@@ -103,32 +114,66 @@ contract setupContract is Test, Deployers {
         key.hooks = IHooks(_hooks);
         (currency0, currency1) = (key.currency0, key.currency1);
 
-        CUSTOM_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({tickLower: -(2*_tickSpacing), tickUpper: (2*_tickSpacing), liquidityDelta: 1 ether, salt: 0});
-        CUSTOM_REMOVE_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({tickLower: -(2*_tickSpacing), tickUpper: (2*_tickSpacing), liquidityDelta: -1 ether, salt: 0});
-        CUSTOM_SWAP_PARAMS = IPoolManager.SwapParams({zeroForOne: true, amountSpecified: -100, sqrtPriceLimitX96: MIN_PRICE_LIMIT});
+        CUSTOM_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({
+            tickLower: -(2 * _tickSpacing),
+            tickUpper: (2 * _tickSpacing),
+            liquidityDelta: 1 ether,
+            salt: 0
+        });
+        CUSTOM_REMOVE_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({
+            tickLower: -(2 * _tickSpacing),
+            tickUpper: (2 * _tickSpacing),
+            liquidityDelta: -1 ether,
+            salt: 0
+        });
+        CUSTOM_SWAP_PARAMS = IPoolManager.SwapParams({
+            zeroForOne: true,
+            amountSpecified: -100,
+            sqrtPriceLimitX96: MIN_PRICE_LIMIT
+        });
 
         custom_deployFreshManagerAndRouters();
         vm.startPrank(txOrigin, txOrigin);
         {
             vm.deal(txOrigin, Constants.MAX_UINT128 / 2);
-            if (!currency0.isAddressZero()) custom_ApproveCurrency(key.currency0, Constants.MAX_UINT128 / 2);
+            if (!currency0.isAddressZero())
+                custom_ApproveCurrency(
+                    key.currency0,
+                    Constants.MAX_UINT128 / 2
+                );
             custom_ApproveCurrency(key.currency1, Constants.MAX_UINT128 / 2);
         }
         vm.stopPrank();
 
         // check initialized
-        (uint160 sqrtPriceX96,,,) = manager.getSlot0(key.toId());
+        (uint160 sqrtPriceX96, , , ) = manager.getSlot0(key.toId());
         if (sqrtPriceX96 == 0) {
             vm.prank(deployer);
-            initPool(key.currency0, key.currency1, key.hooks, key.fee, key.tickSpacing, SQRT_PRICE_1_1);
+            initPool(
+                key.currency0,
+                key.currency1,
+                key.hooks,
+                key.fee,
+                key.tickSpacing,
+                SQRT_PRICE_1_1
+            );
             sqrtPriceX96 = SQRT_PRICE_1_1;
         }
     }
 
     function custom_deployFreshManagerAndRouters() internal {
-        // manager = IPoolManager(0x00b036b58a818b1bc34d502d3fe730db729e62ac); // Unichain
-        // manager = IPoolManager(0x000000000004444c5dc75cB358380D2e3dE08A90); // Ethereum
-        manager = IPoolManager(0x498581fF718922c3f8e6A244956aF099B2652b2b); // Base
+        if (block.chainid == 1301) {
+            // Unichain
+            manager = IPoolManager(0x00B036B58a818B1BC34d502D3fE730Db729e62AC);
+        } else if (block.chainid == 1) {
+            // Ethereum Mainnet
+            manager = IPoolManager(0x000000000004444c5dc75cB358380D2e3dE08A90);
+        } else if (block.chainid == 8453) {
+            // Base Mainnet
+            manager = IPoolManager(0x498581fF718922c3f8e6A244956aF099B2652b2b);
+        } else {
+            revert("Unsupported chain");
+        }
 
         swapRouter = new PoolSwapTest(manager);
         swapRouterNoChecks = new SwapRouterNoChecks(manager);
@@ -141,9 +186,12 @@ contract setupContract is Test, Deployers {
         actionsRouter = new ActionsRouter(manager);
     }
 
-    function custom_ApproveCurrency(Currency currency, uint256 amount) internal {
+    function custom_ApproveCurrency(
+        Currency currency,
+        uint256 amount
+    ) internal {
         MockERC20 token = MockERC20(Currency.unwrap(currency));
-        
+
         deal(address(token), txOrigin, amount);
         address[9] memory toApprove = [
             address(swapRouter),
