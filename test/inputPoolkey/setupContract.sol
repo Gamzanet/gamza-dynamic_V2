@@ -162,9 +162,9 @@ contract setupContract is Test, Deployers {
     }
 
     function custom_deployFreshManagerAndRouters() internal {
-        if (block.chainid == 1301) {
+        if (block.chainid == 130) {
             // Unichain
-            manager = IPoolManager(0x00B036B58a818B1BC34d502D3fE730Db729e62AC);
+            manager = IPoolManager(0x1F98400000000000000000000000000000000004);
         } else if (block.chainid == 1) {
             // Ethereum Mainnet
             manager = IPoolManager(0x000000000004444c5dc75cB358380D2e3dE08A90);
