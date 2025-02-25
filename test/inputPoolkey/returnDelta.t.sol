@@ -410,7 +410,7 @@ contract returnDeltaTest is Test, Deployers, setupContract {
         console.log(string.concat(s, "-for-expected-current-price: "), _priceCurrent);
         console.log(string.concat(s, "-for-expected-current-liquidity: "), _liquidity);
         console.log(string.concat(s, "-for-expected-amount0-specified: "), SWAP_PARAMS.amountSpecified < 0 ? -SWAP_PARAMS.amountSpecified : SWAP_PARAMS.amountSpecified);
-        console.log(string.concat(s, "-for-expected-current-fee: "), key.fee);
+        console.log(string.concat(s, "-for-expected-current-fee: "), _lpFee);
     }
 
     function _logForActualSwapPrice(string memory s, int128 _amount_in, int128 _amount_out) internal {
