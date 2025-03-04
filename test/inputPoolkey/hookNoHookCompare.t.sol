@@ -66,44 +66,26 @@ contract PoolManagerTest is Test, Deployers, setupContract {
         console.log("setup end:", gasleft());
     }
 
-    function test_addLiquidity_compare() public {
+    function test_addLiquidityWithHook() public {
         vm.startPrank(txOrigin);
-        uint256 snapshot = vm.snapshot();
         test_addLiquidity(key);
-        vm.revertTo(snapshot);
-        test_addLiquidity(emptyHook);
-        vm.revertTo(snapshot);
     }
-
+    function test_addLiquidityWithNoHook() public {
+        vm.startPrank(txOrigin);
+        test_addLiquidity(emptyHook);
+    }
     function test_addLiquidity(PoolKey memory keys) internal {
-        // if (
-        //     !Hooks.hasPermission(key.hooks, Hooks.BEFORE_ADD_LIQUIDITY_FLAG) &&
-        //     !Hooks.hasPermission(key.hooks, Hooks.AFTER_ADD_LIQUIDITY_FLAG)
-        // ) {
-        //     emit log_string("Skip Test");
-        //     return;
-        // }
         uint256 start;
         uint256 end;
         
         if (keys.currency0.isAddressZero()) {
-            vm.pauseGasMetering();
             start = gasleft();
-            vm.resumeGasMetering();
-
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(keys, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            vm.pauseGasMetering();
             end = gasleft();
-            vm.resumeGasMetering();
         } else {
-            vm.pauseGasMetering();
             start = gasleft();
-            vm.resumeGasMetering();
-
             modifyLiquidityRouter.modifyLiquidity(keys, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            vm.pauseGasMetering();
             end = gasleft();
-            vm.resumeGasMetering();
         }
         if (address(keys.hooks) == address(0x0)) {
             console.log("no-hook-add-gas-using : ", (start - end));
@@ -115,49 +97,31 @@ contract PoolManagerTest is Test, Deployers, setupContract {
             console.log("hook-add-totalGas-using : ", (start - end) * tx.gasprice);
         }
     }
-    function test_removeLiquidity_compare() public {
-        vm.startPrank(txOrigin);
-        uint256 snapshot = vm.snapshot();
-        test_removeLiquidity(key);
-        vm.revertTo(snapshot);
-        test_removeLiquidity(emptyHook);
-        vm.revertTo(snapshot);
-    }
 
+    function test_removeLiquidityWithHook() public {
+        vm.startPrank(txOrigin);
+        test_removeLiquidity(key);
+    }
+    function test_removeLiquidityWithNoHook() public {
+        vm.startPrank(txOrigin);
+        test_removeLiquidity(emptyHook);
+    }
     function test_removeLiquidity(PoolKey memory keys) internal {
-        // if (
-        //     !Hooks.hasPermission(
-        //         key.hooks,
-        //         Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG
-        //     ) &&
-        //     !Hooks.hasPermission(key.hooks, Hooks.AFTER_REMOVE_LIQUIDITY_FLAG)
-        // ) {
-        //     emit log_string("Skip Test");
-        //     return;
-        // }
         uint256 start;
         uint256 end;
 
         if (keys.currency0.isAddressZero()) {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(keys, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            vm.pauseGasMetering();
-            start = gasleft();
-            vm.resumeGasMetering();
             
+            start = gasleft();
             modifyLiquidityRouter.modifyLiquidity(keys, CUSTOM_REMOVE_LIQUIDITY_PARAMS, ZERO_BYTES);
-            vm.pauseGasMetering();
             end = gasleft();
-            vm.resumeGasMetering();
         } else {
             modifyLiquidityRouter.modifyLiquidity(keys, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            vm.pauseGasMetering();
-            start = gasleft();
-            vm.resumeGasMetering();
             
+            start = gasleft();
             modifyLiquidityRouter.modifyLiquidity(keys, CUSTOM_REMOVE_LIQUIDITY_PARAMS, ZERO_BYTES);
-            vm.pauseGasMetering();
             end = gasleft();
-            vm.resumeGasMetering();
         }
         if (address(keys.hooks) == address(0x0)) {
             console.log("no-hook-remove-gas-using : ", (start - end));
@@ -170,48 +134,30 @@ contract PoolManagerTest is Test, Deployers, setupContract {
         }
     }
 
-    function test_donate_compare() public {
+    function test_donateWithHook() public {
         vm.startPrank(txOrigin);
-        uint256 snapshot = vm.snapshot();
         test_donate(key);
-        vm.revertTo(snapshot);
+    }
+    function test_donateWithNoHook() public {
+        vm.startPrank(txOrigin);
         test_donate(emptyHook);
     }
-
     function test_donate(PoolKey memory keys) internal {
-        // if (
-        //     !Hooks.hasPermission(
-        //         key.hooks,
-        //         Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG
-        //     ) &&
-        //     !Hooks.hasPermission(key.hooks, Hooks.AFTER_REMOVE_LIQUIDITY_FLAG)
-        // ) {
-        //     emit log_string("Skip Test");
-        //     return;
-        // }
         uint256 start;
         uint256 end;
 
         if (keys.currency0.isAddressZero()) {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(keys, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            vm.pauseGasMetering();
+            
             start = gasleft();
-            vm.resumeGasMetering();
-
             donateRouter.donate{value: 100}(keys, 100, 200, ZERO_BYTES);
-            vm.pauseGasMetering();
             end = gasleft();
-            vm.resumeGasMetering();
         } else {
             modifyLiquidityRouter.modifyLiquidity(keys, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            vm.pauseGasMetering();
+            
             start = gasleft();
-            vm.resumeGasMetering();
-
             donateRouter.donate(keys, 100, 200, ZERO_BYTES);
-            vm.pauseGasMetering();
             end = gasleft();
-            vm.resumeGasMetering();
         }
 
         if (address(keys.hooks) == address(0x0)) {
@@ -225,24 +171,15 @@ contract PoolManagerTest is Test, Deployers, setupContract {
         }
     }
 
-    function test_swap_compare() public {
+    function test_swapWithHook() public {
         vm.startPrank(txOrigin);
-        console.log(gasleft());
-        uint256 snapshot = vm.snapshot();
         test_swap(key);
-        vm.revertTo(snapshot);
-        test_swap(emptyHook);
-        vm.revertTo(snapshot);
     }
-
+    function test_swapWithNoHook() public {
+        vm.startPrank(txOrigin);
+        test_swap(emptyHook);
+    }
     function test_swap(PoolKey memory keys) internal {
-        // if (
-        //     !Hooks.hasPermission(key.hooks, Hooks.BEFORE_SWAP_FLAG) &&
-        //     !Hooks.hasPermission(key.hooks, Hooks.AFTER_SWAP_FLAG)
-        // ) {
-        //     emit log_string("Skip Test");
-        //     return;
-        // }
         uint256 start;
         uint256 end;
 
@@ -251,24 +188,16 @@ contract PoolManagerTest is Test, Deployers, setupContract {
 
         if (key.currency0.isAddressZero()) {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(keys, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            vm.pauseGasMetering();
+            
             start = gasleft();
-            vm.resumeGasMetering();
-
             balance = swapRouter.swap{value: 100}(keys, CUSTOM_SWAP_PARAMS, testSettings, ZERO_BYTES);
-            vm.pauseGasMetering();
             end = gasleft();
-            vm.resumeGasMetering();
         } else {
             modifyLiquidityRouter.modifyLiquidity(keys, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-            vm.pauseGasMetering();
+            
             start = gasleft();
-            vm.resumeGasMetering();
-
             balance = swapRouter.swap(keys, CUSTOM_SWAP_PARAMS, testSettings, ZERO_BYTES);
-            vm.pauseGasMetering();
             end = gasleft();
-            vm.resumeGasMetering();
         }
 
         (
