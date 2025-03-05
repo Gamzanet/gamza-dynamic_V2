@@ -3,6 +3,11 @@ import requests
 import sys
 import re
 
+NATIVE_TOKENS = {
+    "https://unichain.drpc.org": "ETH",
+    "https://mainnet.base.org": "ETH",
+    "https://1rpc.io/eth": "ETH"
+}
 
 def get_token_id(token_symbol):
     # Send the request to get the token ID
@@ -67,6 +72,10 @@ def fetch_token_price(token0_symbol, token1_symbol):
     return (token1_price / token0_price)
 
 def get_token_symbol_from_rpc(rpc_url, token_address):
+    # check native token
+    if token_address.lower() == "0x0000000000000000000000000000000000000000":
+        return NATIVE_TOKENS.get(rpc_url.lower(), "ETH")  # 기본값은 ETH로 설정
+    
     # Send a request to the RPC URL to get the token symbol from the token address
     payload = {
         "jsonrpc": "2.0",
