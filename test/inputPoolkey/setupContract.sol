@@ -171,7 +171,11 @@ contract setupContract is Test, Deployers {
         } else if (block.chainid == 8453) {
             // Base Mainnet
             manager = IPoolManager(0x498581fF718922c3f8e6A244956aF099B2652b2b);
-        } else {
+        } else if (block.chainid == 42161) {
+            // Arbitrum One
+            manager = IPoolManager(0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32);
+        }
+        else {
             revert("Unsupported chain");
         }
 
