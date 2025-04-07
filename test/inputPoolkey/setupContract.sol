@@ -58,6 +58,7 @@ contract setupContract is Test, Deployers {
     IPoolManager.ModifyLiquidityParams public CUSTOM_REMOVE_LIQUIDITY_PARAMS;
     IPoolManager.SwapParams public CUSTOM_SWAP_PARAMS;
 
+    uint160 sqrtPriceX96;
     address txOrigin = makeAddr("Alice");
     address deployer;
     function setupPoolkey() public {
@@ -112,7 +113,7 @@ contract setupContract is Test, Deployers {
         vm.stopPrank();
 
         // check initialized
-        (uint160 sqrtPriceX96, , , ) = manager.getSlot0(key.toId());
+        (sqrtPriceX96, , , ) = manager.getSlot0(key.toId());
         if (sqrtPriceX96 == 0) {
             vm.prank(deployer);
             initPool(
