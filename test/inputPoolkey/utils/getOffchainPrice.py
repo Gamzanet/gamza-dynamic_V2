@@ -108,7 +108,8 @@ def get_token_symbol_from_rpc(rpc_url, token_address):
 
 if __name__ == '__main__':
     if (len(sys.argv) != 4):
-        print("Usage: python getBalance.py <rpc_url> <token0_address> <token1_address>")
+        # python3 getOffchainPrice.py <rpc_url> <token0Addr> <token1Addr>
+        print("Usage: python getOffchainPrice.py <rpc_url> <token0_address> <token1_address>")
         exit(1)
     
     rpc_url = sys.argv[1]

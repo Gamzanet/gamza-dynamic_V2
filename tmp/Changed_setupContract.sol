@@ -41,7 +41,12 @@ import {PoolClaimsTest} from "v4-core/src/test/PoolClaimsTest.sol";
 import {Action, PoolNestedActionsTest} from "v4-core/src/test/PoolNestedActionsTest.sol";
 import {Actions, ActionsRouter} from "v4-core/src/test/ActionsRouter.sol";
 
-contract setupContract is Test, Deployers {
+import {IPositionManager} from "v4-periphery/src/interfaces/IPositionManager.sol";
+import {PositionConfig} from "v4-periphery/test/shared/PositionConfig.sol";
+import {LiquidityOperations} from "v4-periphery/test/shared/LiquidityOperations.sol";
+import {IAllowanceTransfer} from "permit2/src/interfaces/IAllowanceTransfer.sol";
+
+contract setupContract is Test, Deployers, LiquidityOperations {
     using Hooks for IHooks;
     using LPFeeLibrary for uint24;
     using SafeCast for *;
@@ -51,15 +56,49 @@ contract setupContract is Test, Deployers {
 
     event UnlockCallback();
     event ProtocolFeeControllerUpdated(address feeController);
-    event ModifyLiquidity(PoolId indexed poolId, address indexed sender, int24 tickLower, int24 tickUpper, int256 liquidityDelta, bytes32 salt);
-    event Swap(PoolId indexed poolId, address indexed sender, int128 amount0, int128 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick, uint24 fee);
-    event Donate(PoolId indexed id, address indexed sender, uint256 amount0, uint256 amount1);
-    event Transfer(address caller, address indexed sender, address indexed receiver, uint256 indexed id, uint256 amount);
+    event ModifyLiquidity(
+        PoolId indexed poolId,
+        address indexed sender,
+        int24 tickLower,
+        int24 tickUpper,
+        int256 liquidityDelta,
+        bytes32 salt
+    );
+    event Swap(
+        PoolId indexed poolId,
+        address indexed sender,
+        int128 amount0,
+        int128 amount1,
+        uint160 sqrtPriceX96,
+        uint128 liquidity,
+        int24 tick,
+        uint24 fee
+    );
+
+    event Donate(
+        PoolId indexed id,
+        address indexed sender,
+        uint256 amount0,
+        uint256 amount1
+    );
+
+    event Transfer(
+        address caller,
+        address indexed sender,
+        address indexed receiver,
+        uint256 indexed id,
+        uint256 amount
+    );
 
     IPoolManager.ModifyLiquidityParams public CUSTOM_LIQUIDITY_PARAMS;
     IPoolManager.ModifyLiquidityParams public CUSTOM_REMOVE_LIQUIDITY_PARAMS;
     IPoolManager.SwapParams public CUSTOM_SWAP_PARAMS;
 
+    IAllowanceTransfer public permit2;
+    PositionConfig public LMP_LIQUIDITY_PARAMS;
+    uint256 public tokenId;
+    
+    uint160 sqrtPriceX96;
     address txOrigin = makeAddr("Alice");
     address deployer;
     function setupPoolkey() public {
@@ -71,10 +110,11 @@ contract setupContract is Test, Deployers {
         address _currency0 = vm.parseJsonAddress(code_json, ".data.currency0");
         address _currency1 = vm.parseJsonAddress(code_json, ".data.currency1");
         uint24 _fee = uint24(vm.parseJsonUint(code_json, ".data.fee"));
-        int24 _tickSpacing = int24(vm.parseJsonInt(code_json, ".data.tickSpacing"));
+        int24 _tickSpacing = int24(
+            vm.parseJsonInt(code_json, ".data.tickSpacing")
+        );
         address _hooks = vm.parseJsonAddress(code_json, ".data.hooks");
         deployer = vm.parseJsonAddress(code_json, ".deployer");
-        txOrigin = deployer;
 
         key.currency0 = Currency.wrap(_currency0);
         key.currency1 = Currency.wrap(_currency1);
@@ -101,6 +141,9 @@ contract setupContract is Test, Deployers {
             sqrtPriceLimitX96: MIN_PRICE_LIMIT
         });
 
+        LMP_LIQUIDITY_PARAMS = PositionConfig({poolKey: key, tickLower: -(2 * _tickSpacing), tickUpper: (2 * _tickSpacing)});
+
+        txOrigin = deployer;
         custom_deployFreshManagerAndRouters();
         vm.startPrank(txOrigin, txOrigin);
         {
@@ -115,7 +158,7 @@ contract setupContract is Test, Deployers {
         vm.stopPrank();
 
         // check initialized
-        (uint160 sqrtPriceX96, , , ) = manager.getSlot0(key.toId());
+        (sqrtPriceX96, , , ) = manager.getSlot0(key.toId());
         if (sqrtPriceX96 == 0) {
             vm.prank(deployer);
             initPool(
@@ -149,7 +192,9 @@ contract setupContract is Test, Deployers {
         }
 
         swapRouter = new PoolSwapTest(manager);
+        swapRouterNoChecks = new SwapRouterNoChecks(manager);
         modifyLiquidityRouter = new PoolModifyLiquidityTest(manager);
+        modifyLiquidityNoChecks = new PoolModifyLiquidityTestNoChecks(manager);
         donateRouter = new PoolDonateTest(manager);
         takeRouter = new PoolTakeTest(manager);
         claimsRouter = new PoolClaimsTest(manager);
@@ -158,32 +203,22 @@ contract setupContract is Test, Deployers {
 
         if (block.chainid == 130) {
             // Unichain
-            vm.etch(0x4529A01c7A0410167c5740C487A8DE60232617bf, address(modifyLiquidityRouter).code);
-            modifyLiquidityRouter = PoolModifyLiquidityTest(0x4529A01c7A0410167c5740C487A8DE60232617bf);
-            vm.etch(0xEf740bf23aCaE26f6492B10de645D6B98dC8Eaf3, address(swapRouter).code);
-            swapRouter = PoolSwapTest(0xEf740bf23aCaE26f6492B10de645D6B98dC8Eaf3);
+            lpm = IPositionManager(0x7C5f5A4bBd8fD63184577525326123B519429bDc);
         } else if (block.chainid == 1) {
             // Ethereum Mainnet
-            vm.etch(0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e, address(modifyLiquidityRouter).code);
-            modifyLiquidityRouter = PoolModifyLiquidityTest(0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e);
-            vm.etch(0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af, address(swapRouter).code);
-            swapRouter = PoolSwapTest(0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af);
+            lpm = IPositionManager(0x7C5f5A4bBd8fD63184577525326123B519429bDc);
         } else if (block.chainid == 8453) {
             // Base Mainnet
-            vm.etch(0x7C5f5A4bBd8fD63184577525326123B519429bDc, address(modifyLiquidityRouter).code);
-            modifyLiquidityRouter = PoolModifyLiquidityTest(0x7C5f5A4bBd8fD63184577525326123B519429bDc);
-            vm.etch(0x6fF5693b99212Da76ad316178A184AB56D299b43, address(swapRouter).code);
-            swapRouter = PoolSwapTest(0x6fF5693b99212Da76ad316178A184AB56D299b43);
+            lpm = IPositionManager(0x7C5f5A4bBd8fD63184577525326123B519429bDc);
+            // lpm = IPositionManager(0x043ac8DBd2F0e932800210260f207806650C6145);
+            permit2 = IAllowanceTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
         } else if (block.chainid == 42161) {
             // Arbitrum One
-            vm.etch(0xd88F38F930b7952f2DB2432Cb002E7abbF3dD869, address(modifyLiquidityRouter).code);
-            modifyLiquidityRouter = PoolModifyLiquidityTest(0xd88F38F930b7952f2DB2432Cb002E7abbF3dD869);
-            vm.etch(0xA51afAFe0263b40EdaEf0Df8781eA9aa03E381a3, address(swapRouter).code);
-            swapRouter = PoolSwapTest(0xA51afAFe0263b40EdaEf0Df8781eA9aa03E381a3);
+            lpm = IPositionManager(0x7C5f5A4bBd8fD63184577525326123B519429bDc);
         }
         else {
             revert("Unsupported chain");
-        }
+        }        
     }
 
     function custom_ApproveCurrency(
@@ -193,18 +228,23 @@ contract setupContract is Test, Deployers {
         MockERC20 token = MockERC20(Currency.unwrap(currency));
 
         deal(address(token), txOrigin, amount);
-        address[7] memory toApprove = [
+        address[11] memory toApprove = [
             address(swapRouter),
+            address(swapRouterNoChecks),
             address(modifyLiquidityRouter),
+            address(modifyLiquidityNoChecks),
             address(donateRouter),
             address(takeRouter),
             address(claimsRouter),
             address(nestedActionRouter.executor()),
-            address(actionsRouter)
+            address(actionsRouter),
+            address(lpm),
+            address(permit2)
         ];
 
         for (uint256 i = 0; i < toApprove.length; i++) {
             token.approve(toApprove[i], amount);
         }
+        permit2.approve(address(token), address(lpm), type(uint160).max, type(uint48).max);
     }
 }

@@ -32,9 +32,7 @@ import {setupContract} from "./setupContract.sol";
 
 // Routers
 import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
-import {PoolModifyLiquidityTestNoChecks} from "v4-core/src/test/PoolModifyLiquidityTestNoChecks.sol";
 import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
-import {SwapRouterNoChecks} from "v4-core/src/test/SwapRouterNoChecks.sol";
 import {PoolDonateTest} from "v4-core/src/test/PoolDonateTest.sol";
 import {PoolTakeTest} from "v4-core/src/test/PoolTakeTest.sol";
 import {PoolClaimsTest} from "v4-core/src/test/PoolClaimsTest.sol";
@@ -89,10 +87,10 @@ contract Minimum_remove is Test, Deployers, setupContract {
         // add double the liquidity to remove
         IPoolManager.ModifyLiquidityParams memory uniqueParams =
             IPoolManager.ModifyLiquidityParams({tickLower: -(5*key.tickSpacing), tickUpper: -(3*key.tickSpacing), liquidityDelta: 1 ether, salt: 0});
-        modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
+        modifyLiquidityRouter.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
 
         uniqueParams.liquidityDelta /= -2;
-        modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
+        modifyLiquidityRouter.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
         // snapLastCall("simple removeLiquidity some liquidity remains");
     }
 

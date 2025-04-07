@@ -32,9 +32,7 @@ import {setupContract} from "./setupContract.sol";
 
 // Routers
 import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
-import {PoolModifyLiquidityTestNoChecks} from "v4-core/src/test/PoolModifyLiquidityTestNoChecks.sol";
 import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
-import {SwapRouterNoChecks} from "v4-core/src/test/SwapRouterNoChecks.sol";
 import {PoolDonateTest} from "v4-core/src/test/PoolDonateTest.sol";
 import {PoolTakeTest} from "v4-core/src/test/PoolTakeTest.sol";
 import {PoolClaimsTest} from "v4-core/src/test/PoolClaimsTest.sol";
@@ -188,10 +186,13 @@ contract MinimumTest is Test, Deployers, setupContract {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
+        PoolSwapTest.TestSettings memory testSettings =
+            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
+
         if (currency0.isAddressZero())
-            swapRouterNoChecks.swap{value: 100}(key, CUSTOM_SWAP_PARAMS);
+            swapRouter.swap{value: 100}(key, CUSTOM_SWAP_PARAMS, testSettings, ZERO_BYTES);
         else
-            swapRouterNoChecks.swap(key, CUSTOM_SWAP_PARAMS);
+            swapRouter.swap(key, CUSTOM_SWAP_PARAMS, testSettings, ZERO_BYTES);
         // snapLastCall("simple swap");
     }
 

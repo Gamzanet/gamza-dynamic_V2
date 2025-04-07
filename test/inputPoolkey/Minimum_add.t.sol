@@ -32,9 +32,7 @@ import {setupContract} from "./setupContract.sol";
 
 // Routers
 import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
-import {PoolModifyLiquidityTestNoChecks} from "v4-core/src/test/PoolModifyLiquidityTestNoChecks.sol";
 import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
-import {SwapRouterNoChecks} from "v4-core/src/test/SwapRouterNoChecks.sol";
 import {PoolDonateTest} from "v4-core/src/test/PoolDonateTest.sol";
 import {PoolTakeTest} from "v4-core/src/test/PoolTakeTest.sol";
 import {PoolClaimsTest} from "v4-core/src/test/PoolClaimsTest.sol";
@@ -74,9 +72,8 @@ contract Minimum_add is Test, Deployers, setupContract {
         // allow liquidity router to burn our 6909 tokens
         manager.setOperator(address(modifyLiquidityRouter), true);
 
-        BalanceDelta delta;
         // add liquidity with 6909: settleUsingBurn=true, takeClaims=true (unused)
-        delta = modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES, true, true);
+        modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES, true, true);
 
         assertLt(manager.balanceOf(address(txOrigin), currency0.toId()), 100 ether);
         assertLt(manager.balanceOf(address(txOrigin), currency1.toId()), 100 ether);
@@ -94,8 +91,8 @@ contract Minimum_add is Test, Deployers, setupContract {
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         IPoolManager.ModifyLiquidityParams memory uniqueParams =
             IPoolManager.ModifyLiquidityParams({tickLower: -(5*key.tickSpacing), tickUpper: -(3*key.tickSpacing), liquidityDelta: 1 ether, salt: 0});
-        modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
-        modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
+        modifyLiquidityRouter.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
+        modifyLiquidityRouter.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
         // snapLastCall("simple addLiquidity second addition same range");
     }
 

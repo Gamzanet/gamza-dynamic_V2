@@ -32,9 +32,7 @@ import {setupContract} from "./setupContract.sol";
 
 // Routers
 import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
-import {PoolModifyLiquidityTestNoChecks} from "v4-core/src/test/PoolModifyLiquidityTestNoChecks.sol";
 import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
-import {SwapRouterNoChecks} from "v4-core/src/test/SwapRouterNoChecks.sol";
 import {PoolDonateTest} from "v4-core/src/test/PoolDonateTest.sol";
 import {PoolTakeTest} from "v4-core/src/test/PoolTakeTest.sol";
 import {PoolClaimsTest} from "v4-core/src/test/PoolClaimsTest.sol";
@@ -634,8 +632,8 @@ contract TimeStdTest is Test, Deployers, setupContract {
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         IPoolManager.ModifyLiquidityParams memory uniqueParams =
             IPoolManager.ModifyLiquidityParams({tickLower: -(5*key.tickSpacing), tickUpper: -(3*key.tickSpacing), liquidityDelta: 1 ether, salt: 0});
-        modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
-        modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
+        modifyLiquidityRouter.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
+        modifyLiquidityRouter.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
     }
 
     function test_removeLiquidity_someLiquidityRemains_gas_UsingTime(uint256 timeToAdd) internal {
@@ -649,10 +647,10 @@ contract TimeStdTest is Test, Deployers, setupContract {
         // add double the liquidity to remove
         IPoolManager.ModifyLiquidityParams memory uniqueParams =
             IPoolManager.ModifyLiquidityParams({tickLower: -(5*key.tickSpacing), tickUpper: -(3*key.tickSpacing), liquidityDelta: 1 ether, salt: 0});
-        modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
+        modifyLiquidityRouter.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
 
         uniqueParams.liquidityDelta /= -2;
-        modifyLiquidityNoChecks.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
+        modifyLiquidityRouter.modifyLiquidity(key, uniqueParams, ZERO_BYTES);
     }
 
     function test_addLiquidity_gas_UsingTime(uint256 timeToAdd) internal {
@@ -706,10 +704,13 @@ contract TimeStdTest is Test, Deployers, setupContract {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
+        PoolSwapTest.TestSettings memory testSettings =
+            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
+
         if (currency0.isAddressZero())
-            swapRouterNoChecks.swap{value: 100}(key, CUSTOM_SWAP_PARAMS);
+            swapRouter.swap{value: 100}(key, CUSTOM_SWAP_PARAMS, testSettings, ZERO_BYTES);
         else
-            swapRouterNoChecks.swap(key, CUSTOM_SWAP_PARAMS);
+            swapRouter.swap(key, CUSTOM_SWAP_PARAMS, testSettings, ZERO_BYTES);
     }
 
     function test_swap_gas_UsingTime(uint256 timeToAdd) internal {
@@ -720,10 +721,13 @@ contract TimeStdTest is Test, Deployers, setupContract {
             modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
         else
             modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
+        PoolSwapTest.TestSettings memory testSettings =
+            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
+
         if (currency0.isAddressZero())
-            swapRouterNoChecks.swap{value: 100}(key, CUSTOM_SWAP_PARAMS);
+            swapRouter.swap{value: 100}(key, CUSTOM_SWAP_PARAMS, testSettings, ZERO_BYTES);
         else
-            swapRouterNoChecks.swap(key, CUSTOM_SWAP_PARAMS);
+            swapRouter.swap(key, CUSTOM_SWAP_PARAMS, testSettings, ZERO_BYTES);
     }
 
     function test_swap_mint6909IfOutputNotTaken_gas_UsingTime(uint256 timeToAdd) internal {
