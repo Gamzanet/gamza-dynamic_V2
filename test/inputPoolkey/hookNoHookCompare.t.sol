@@ -65,11 +65,11 @@ contract PoolManagerTest is Test, Deployers, setupContract {
     }
 
     function test_addLiquidityWithHook() public {
-        vm.startPrank(txOrigin);
+        vm.startPrank(txOrigin, txOrigin);
         test_addLiquidity(key);
     }
     function test_addLiquidityWithNoHook() public {
-        vm.startPrank(txOrigin);
+        vm.startPrank(txOrigin, txOrigin);
         test_addLiquidity(emptyHook);
     }
     function test_addLiquidity(PoolKey memory keys) internal {
@@ -97,11 +97,11 @@ contract PoolManagerTest is Test, Deployers, setupContract {
     }
 
     function test_removeLiquidityWithHook() public {
-        vm.startPrank(txOrigin);
+        vm.startPrank(txOrigin, txOrigin);
         test_removeLiquidity(key);
     }
     function test_removeLiquidityWithNoHook() public {
-        vm.startPrank(txOrigin);
+        vm.startPrank(txOrigin, txOrigin);
         test_removeLiquidity(emptyHook);
     }
     function test_removeLiquidity(PoolKey memory keys) internal {
@@ -133,11 +133,11 @@ contract PoolManagerTest is Test, Deployers, setupContract {
     }
 
     function test_donateWithHook() public {
-        vm.startPrank(txOrigin);
+        vm.startPrank(txOrigin, txOrigin);
         test_donate(key);
     }
     function test_donateWithNoHook() public {
-        vm.startPrank(txOrigin);
+        vm.startPrank(txOrigin, txOrigin);
         test_donate(emptyHook);
     }
     function test_donate(PoolKey memory keys) internal {
@@ -170,11 +170,11 @@ contract PoolManagerTest is Test, Deployers, setupContract {
     }
 
     function test_swapWithHook() public {
-        vm.startPrank(txOrigin);
+        vm.startPrank(txOrigin, txOrigin);
         test_swap(key);
     }
     function test_swapWithNoHook() public {
-        vm.startPrank(txOrigin);
+        vm.startPrank(txOrigin, txOrigin);
         test_swap(emptyHook);
     }
     function test_swap(PoolKey memory keys) internal {

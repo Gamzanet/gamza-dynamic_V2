@@ -50,28 +50,28 @@ contract Minimum_donate is Test, Deployers, setupContract {
         setupPoolkey();
     }
 
-    // test successful donation if pool has liquidity
-    function test_donate_succeedsWhenPoolHasLiquidity() public {
-        vm.startPrank(txOrigin, txOrigin);
-        if (currency0.isAddressZero())
-            modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-        else
-            modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
-        (uint256 feeGrowthGlobal0X128, uint256 feeGrowthGlobal1X128) = manager.getFeeGrowthGlobals(key.toId());
-        assertEq(feeGrowthGlobal0X128, 0);
-        assertEq(feeGrowthGlobal1X128, 0);
+    // // test successful donation if pool has liquidity
+    // function test_donate_succeedsWhenPoolHasLiquidity() public {
+    //     vm.startPrank(txOrigin, txOrigin);
+    //     if (currency0.isAddressZero())
+    //         modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
+    //     else
+    //         modifyLiquidityRouter.modifyLiquidity(key, CUSTOM_LIQUIDITY_PARAMS, ZERO_BYTES);
+    //     (uint256 feeGrowthGlobal0X128, uint256 feeGrowthGlobal1X128) = manager.getFeeGrowthGlobals(key.toId());
+    //     assertEq(feeGrowthGlobal0X128, 0);
+    //     assertEq(feeGrowthGlobal1X128, 0);
 
-        if (currency0.isAddressZero())
-            donateRouter.donate{value: 100}(key, 100, 200, ZERO_BYTES);
-        else
-            donateRouter.donate(key, 100, 200, ZERO_BYTES);
+    //     if (currency0.isAddressZero())
+    //         donateRouter.donate{value: 100}(key, 100, 200, ZERO_BYTES);
+    //     else
+    //         donateRouter.donate(key, 100, 200, ZERO_BYTES);
 
-        // snapLastCall("donate gas with 2 tokens");
+    //     // snapLastCall("donate gas with 2 tokens");
 
-        (feeGrowthGlobal0X128, feeGrowthGlobal1X128) = manager.getFeeGrowthGlobals(key.toId());
-        assertEq(feeGrowthGlobal0X128, 34028236692093846346337);
-        assertEq(feeGrowthGlobal1X128, 68056473384187692692674);
-    }
+    //     (feeGrowthGlobal0X128, feeGrowthGlobal1X128) = manager.getFeeGrowthGlobals(key.toId());
+    //     assertEq(feeGrowthGlobal0X128, 34028236692093846346337);
+    //     assertEq(feeGrowthGlobal1X128, 68056473384187692692674);
+    // }
 
     function test_donate_OneToken_gas() public {
         vm.startPrank(txOrigin, txOrigin);

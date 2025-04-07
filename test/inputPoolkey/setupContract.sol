@@ -32,9 +32,7 @@ import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 
 // Routers
 import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
-import {PoolModifyLiquidityTestNoChecks} from "v4-core/src/test/PoolModifyLiquidityTestNoChecks.sol";
 import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
-import {SwapRouterNoChecks} from "v4-core/src/test/SwapRouterNoChecks.sol";
 import {PoolDonateTest} from "v4-core/src/test/PoolDonateTest.sol";
 import {PoolTakeTest} from "v4-core/src/test/PoolTakeTest.sol";
 import {PoolClaimsTest} from "v4-core/src/test/PoolClaimsTest.sol";
@@ -84,14 +82,14 @@ contract setupContract is Test, Deployers {
         (currency0, currency1) = (key.currency0, key.currency1);
 
         CUSTOM_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({
-            tickLower: -(2 * _tickSpacing),
-            tickUpper: (2 * _tickSpacing),
+            tickLower: -(TickMath.MAX_TICK - (TickMath.MAX_TICK % key.tickSpacing)),
+            tickUpper: (TickMath.MAX_TICK - (TickMath.MAX_TICK % key.tickSpacing)),
             liquidityDelta: 1 ether,
             salt: 0
         });
         CUSTOM_REMOVE_LIQUIDITY_PARAMS = IPoolManager.ModifyLiquidityParams({
-            tickLower: -(2 * _tickSpacing),
-            tickUpper: (2 * _tickSpacing),
+            tickLower: -(TickMath.MAX_TICK - (TickMath.MAX_TICK % key.tickSpacing)),
+            tickUpper: (TickMath.MAX_TICK - (TickMath.MAX_TICK % key.tickSpacing)),
             liquidityDelta: -1 ether,
             salt: 0
         });
@@ -100,7 +98,6 @@ contract setupContract is Test, Deployers {
             amountSpecified: -100,
             sqrtPriceLimitX96: MIN_PRICE_LIMIT
         });
-
         custom_deployFreshManagerAndRouters();
         vm.startPrank(txOrigin, txOrigin);
         {

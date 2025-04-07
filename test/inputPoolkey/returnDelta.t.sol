@@ -146,7 +146,7 @@ contract returnDeltaTest is Test, Deployers, setupContract {
             BalanceDelta delta;
             _logForExpectedPrice("SWAP-exactOut");
             if (currency0.isAddressZero())
-                delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+                delta = swapRouter.swap{value: 1 ether}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             else
                 delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             log_delta(delta, "SWAP-exactOut");
@@ -164,7 +164,7 @@ contract returnDeltaTest is Test, Deployers, setupContract {
             BalanceDelta delta;
             _logForExpectedPrice("SWAP-exactOut Mint 6909");
             if (currency0.isAddressZero())
-                delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+                delta = swapRouter.swap{value: 1 ether}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             else
                 delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             log_delta(delta, "SWAP-exactOut Mint 6909");
@@ -189,7 +189,7 @@ contract returnDeltaTest is Test, Deployers, setupContract {
             BalanceDelta delta;
             _logForExpectedPrice("SWAP-exactOut Burn 6909");
             if (currency0.isAddressZero())
-                delta = swapRouter.swap{value: 100}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
+                delta = swapRouter.swap{value: 1 ether}(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             else
                 delta = swapRouter.swap(key, SWAP_PARAMS, testSettings, ZERO_BYTES);
             log_delta(delta, "SWAP-exactOut Burn 6909");
